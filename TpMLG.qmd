@@ -1,0 +1,120 @@
+---
+title: "TPMLG"
+format: pdf
+editor: visual
+---
+```{r}
+library(titanic)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+datos <- titanic_train %>% select(-Name, -SibSp, -Parch, -Ticket, -Cabin, -Pclass)
+set.seed(147)
+muestra <- datos %>%
+  filter(!is.na(Age), !is.na(Fare), Embarked != "") %>%
+  slice_sample(n = 200)
+
+muestra$GrupoTarifa <- cut(muestra$Fare,
+                         breaks = c(-0.1, 8.0, 14.0, 30.0, Inf),
+                         labels = c("1", "2", "3", "4"),
+                         right = TRUE) 
+muestra$GrupoEdad <- cut(muestra$Age,
+                          breaks = c(0, 12, 18, 40, 60, Inf),
+                          labels = c("Niño", "Adolescente", "Adulto joven", "Adulto", "Mayor"),
+                          right = TRUE)
+
+table(muestra$GrupoTarifa, muestra$Survived)
+```
+
+# Análisis Descriptivo 
+
+Grafico de la variable respuesta
+```{r}
+ggplot(muestra, aes(x = Survived)) +
+  geom_bar() +
+  labs(x = "Sobrevivió", y = "Cantidad")
+```
+```{r}
+ggplot(muestra, aes(x = Sex, fill = as.factor(Survived))) +
+  geom_bar(position = "fill") +
+  labs(y = "Proporción")
+
+ggplot(muestra, aes(x = factor(Embarked), fill = as.factor(Survived))) +
+  geom_bar(position = "fill") +
+  labs(x = "Embarque", y = "Proporción")
+
+ggplot(muestra, aes(x = GrupoEdad, fill = as.factor(Survived))) +
+  geom_bar(position = "fill") +
+  labs(x = "Grupo de edad", y = "Proporción")
+
+ggplot(muestra, aes(x = GrupoTarifa, fill = as.factor(Survived))) +
+  geom_bar(position = "fill") +
+  labs(x = "Grupo de tarifa", y = "Proporción")
+```
+
+
+# Analisis de mlg 
+```{r}
+datos_agrup <- muestra %>%
+  group_by(Sex, GrupoEdad, GrupoTarifa, Embarked) %>%
+  summarise(yi = sum(Survived), ni = n(), .groups = "drop")
+```
+
+```{r}
+# 1. Calculamos la proporción de supervivencia por grupo de tarifa
+datos_agrupados <- muestra %>%
+  group_by(GrupoTarifa) %>%
+  summarise(prop_sobrevivientes = mean(Survived, na.rm = TRUE))
+
+# 2. Armamos el gráfico con la estructura que pediste
+ggplot(datos_agrupados, aes(x = GrupoTarifa, y = prop_sobrevivientes)) + 
+  geom_point(fill = "orange", shape = 21, size = 3) + 
+  xlab("Grupo de tarifa") + 
+  ylab("Proporción de supervivencia") + 
+  ggtitle("Proporción de supervivencia según el grupo de tarifa") + 
+  theme_minimal()
+```
+
+```{r}
+m_logit <- glm(yi/ni ~ Sex + GrupoEdad + GrupoTarifa + Embarked,
+               family = binomial(link = "logit"),
+               data = datos_agrup, weights = ni)
+m_probit  <-glm(yi/ni ~ Sex + GrupoEdad + GrupoTarifa + Embarked,
+               family = binomial(link = "probit"),
+               data = datos_agrup, weights = ni)
+m_cloglog  <-glm(yi/ni ~ Sex + GrupoEdad + GrupoTarifa + Embarked,
+               family = binomial(link = "cloglog"),
+               data = datos_agrup, weights = ni) #lo probamos de onda nomas 
+
+AIC(m_logit, m_probit, m_cloglog)
+```
+
+```{r}
+#1. Ajustar los modelos con la misma base agrupada
+f <- yi/ni ~ Sex + GrupoEdad + GrupoTarifa + Embarked
+
+m_logit   <- glm(f, family = binomial("logit"),   data = datos_agrup, weights = ni)
+m_probit  <- glm(f, family = binomial("probit"),  data = datos_agrup, weights = ni)
+m_cloglog <- glm(f, family = binomial("cloglog"), data = datos_agrup, weights = ni)
+
+#2. Comparar AIC, BIC y deviance en una sola tabla:
+modelos <- list(Logit = m_logit, Probit = m_probit, Cloglog = m_cloglog)
+
+data.frame(
+  Enlace   = names(modelos),
+  AIC      = sapply(modelos, AIC),
+  BIC      = sapply(modelos, BIC),
+  Deviance = sapply(modelos, deviance),
+  gl       = sapply(modelos, df.residual)
+)
+```
+
+# HACER SELECCION DE VARIABLES (AGREGANDO INTERACCIONES) Y LUEGO ESTO
+```{r}
+#3. Bondad de ajuste de cada modelo (deviance residual contra una chi-cuadrado):
+sapply(modelos, function(m) pchisq(deviance(m), df.residual(m), lower.tail = FALSE))
+```
+
+
