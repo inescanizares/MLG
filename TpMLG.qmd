@@ -7,6 +7,7 @@ editor: visual
 library(titanic)
 library(dplyr)
 library(ggplot2)
+library(glmtoolbox); library(statmod); library(pROC); library(tidyr)
 ```
 
 ```{r}
@@ -19,13 +20,13 @@ muestra <- datos %>%
 muestra$GrupoTarifa <- cut(muestra$Fare,
                          breaks = c(-0.1, 8.0, 14.0, 30.0, Inf),
                          labels = c("1", "2", "3", "4"),
-                         right = TRUE) 
-muestra$GrupoEdad <- cut(muestra$Age,
-                          breaks = c(0, 12, 18, 40, 60, Inf),
-                          labels = c("Niño", "Adolescente", "Adulto joven", "Adulto", "Mayor"),
-                          right = TRUE)
-
-table(muestra$GrupoTarifa, muestra$Survived)
+                         right = TRUE)
+# muestra$GrupoEdad <- cut(muestra$Age,
+#                           breaks = c(0, 12, 18, 40, 60, Inf),
+#                           labels = c("Niño", "Adolescente", "Adulto joven", "Adulto", "Mayor"),
+#                           right = TRUE)
+# 
+# table(muestra$GrupoTarifa, muestra$Survived)
 ```
 
 # Análisis Descriptivo 
@@ -111,7 +112,137 @@ data.frame(
 )
 ```
 
-# HACER SELECCION DE VARIABLES (AGREGANDO INTERACCIONES) Y LUEGO ESTO
+Hacemos selección de variables 
+```{r}
+
+muestra$Sex      <- factor(muestra$Sex)
+muestra$Embarked <- factor(muestra$Embarked)
+muestra$logFare  <- log(muestra$Fare + 1)
+
+# =====================================================
+# ETAPA 1: ¿hacen falta interacciones?
+# =====================================================
+# Modelo 1: efectos principales
+modelo_1 <- glm(Survived ~ Sex + Age + logFare + Embarked,
+                family = binomial(link = "logit"), data = muestra)
+summary(modelo_1)
+
+```
+
+```{r}
+table(muestra$Embarked, muestra$Survived)
+```
+```{r}
+add1(modelo_1, scope = ~ . + Sex:Age + Sex:logFare + Sex:Embarked + Age:logFare + Age:Embarked + logFare:Embarked, test = "LRT")
+```
+
+Se evaluó la incorporación de cada interacción doble al modelo de efectos principales mediante tests de razón de verosimilitud, y ninguna resultó significativa (todos los p-valores > 0.40), además de que el AIC no mejoraba en ningún caso. El modelo con todas las interacciones dobles presentó cuasi-separación, debido a que solo 8 pasajeros embarcaron en Queenstown. Por parsimonia, se mantiene el modelo de efectos principales.
+
+```{r}
+# ============================================================
+# ETAPA 2: ¿se puede sacar alguna variable del modelo 1?
+# ============================================================
+drop1(modelo_1, test = "LRT") # Esto te da un p-valor por variable, y para Embarked es el que vale.
+
+# Embarked (2 parámetros)
+# H0) beta_Q = beta_S = 0 | H1) al menos uno distinto de 0
+modelo_1a <- update(modelo_1, . ~ . - Embarked)
+anova(modelo_1a, modelo_1, test = "LRT")
+
+# Age
+# H0) beta(Age) = 0 | H1) beta(Age) != 0
+modelo_1b <- update(modelo_1, . ~ . - Age)
+anova(modelo_1b, modelo_1, test = "LRT")
+
+# Age y Embarked juntas
+modelo_1c <- update(modelo_1, . ~ . - Age - Embarked)
+anova(modelo_1c, modelo_1, test = "LRT")
+
+# Antes de sacar Age: ¿es un problema de forma (no linealidad)?
+modelo_1_age2 <- update(modelo_1, . ~ . + I(Age^2))
+anova(modelo_1, modelo_1_age2, test = "LRT")
+
+# Complemento con AIC
+AIC(modelo_1, modelo_1a, modelo_1b, modelo_1c)
+```
+```{r}
+# 1) Modelo final (efectos principales reducidos)
+modelo_final <- glm(Survived ~ Sex + logFare,
+                    family = binomial(link = "logit"), data = muestra)
+summary(modelo_final)
+
+# 2) Chequeos del predictor sobre el modelo reducido
+add1(modelo_final, scope = ~ . + Sex:logFare, test = "LRT")      # interacción
+
+modelo_lin_cat <- glm(Survived ~ Sex + logFare + GrupoTarifa,    # linealidad de logFare
+                      family = binomial(link = "logit"), data = muestra)
+anova(modelo_final, modelo_lin_cat, test = "LRT")
+
+# 3) Si todo está bien, seguís con el bloque anterior:
+#    hltest, enlace (AIC, test de eta^2, gráfico), residuos cuantil, OR con IC, ROC
+```
+
+Seguimos con el analisis de mlg
+
+```{r}
+# ===== Bondad de ajuste (Hosmer-Lemeshow) =====
+# H0) el modelo ajusta bien
+hltest(modelo_final)
+# p-value > 0.05 entonces no RH0, el modelo ajusta bien 
+# ===== Enlace =====
+# a) AIC de los tres enlaces con el mismo predictor
+m_probit  <- update(modelo_final, family = binomial("probit"))
+m_cloglog <- update(modelo_final, family = binomial("cloglog"))
+AIC(modelo_final, m_probit, m_cloglog)
+
+# b) Test de eta^2 (H0: el enlace es adecuado)
+muestra$eta2 <- predict(modelo_final)^2
+modelo_eta2  <- update(modelo_final, . ~ . + eta2)
+anova(modelo_final, modelo_eta2, test = "LRT")
+
+# c) Gráfico: proporciones observadas por deciles de eta + curvas de los 3 enlaces
+muestra$eta <- predict(modelo_final)
+curvas <- data.frame(eta = muestra$eta,
+                     Logit   = fitted(modelo_final),
+                     Probit  = fitted(m_probit),
+                     Cloglog = fitted(m_cloglog)) %>%
+  pivot_longer(-eta, names_to = "Modelo", values_to = "p")
+
+obs <- muestra %>%
+  mutate(grupo = cut(eta, breaks = unique(quantile(eta, seq(0, 1, 0.1))),
+                     include.lowest = TRUE)) %>%
+  group_by(grupo) %>%
+  summarise(eta = mean(eta), prop = mean(Survived), n = n())
+
+ggplot() +
+  geom_line(data = curvas, aes(eta, p, color = Modelo), linewidth = 1) +
+  geom_point(data = obs, aes(eta, prop, size = n), fill = "orange", shape = 21) +
+  labs(x = expression(hat(eta)~"(logit)"), y = "Proporción de supervivencia", size = "Pasajeros") +
+  theme_minimal()
+
+# ===== Residuos cuantil =====
+rQ <- qresid(modelo_final)
+G1 <- ggplot(muestra, aes(x = fitted(modelo_final), y = rQ)) +
+  geom_point(fill = "orange", shape = 21, size = 2) +
+  geom_hline(yintercept = 0) + ylim(-3, 3) +
+  geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
+  labs(x = expression(hat(pi)), y = "Residuos cuantil") + theme_minimal()
+G2 <- ggplot(muestra, aes(sample = rQ)) +
+  stat_qq(fill = "orange", shape = 21, size = 2) + stat_qq_line(color = "red", linetype = "dashed") +
+  labs(x = "Cuantiles teóricos", y = "Cuantiles de los residuos") + theme_minimal()
+gridExtra::grid.arrange(G1, G2, ncol = 2)
+
+# ===== Razones de odds con IC (Wald 95%) =====
+exp(cbind(OR = coef(modelo_final), confint.default(modelo_final)))
+
+# ===== ROC y punto de corte de Youden =====
+Curva.ROC <- roc(muestra$Survived, fitted(modelo_final))
+auc(Curva.ROC)
+coords(Curva.ROC, "best", best.method = "youden",
+       ret = c("threshold", "sensitivity", "specificity"))
+```
+
+
 ```{r}
 #3. Bondad de ajuste de cada modelo (deviance residual contra una chi-cuadrado):
 sapply(modelos, function(m) pchisq(deviance(m), df.residual(m), lower.tail = FALSE))
