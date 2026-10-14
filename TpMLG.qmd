@@ -3,6 +3,7 @@ title: "TPMLG"
 format: pdf
 editor: visual
 ---
+
 ```{r}
 library(titanic)
 library(dplyr)
@@ -29,14 +30,16 @@ muestra$GrupoTarifa <- cut(muestra$Fare,
 # table(muestra$GrupoTarifa, muestra$Survived)
 ```
 
-# Análisis Descriptivo 
+# Análisis Descriptivo
 
 Grafico de la variable respuesta
+
 ```{r}
 ggplot(muestra, aes(x = Survived)) +
   geom_bar() +
   labs(x = "Sobrevivió", y = "Cantidad")
 ```
+
 ```{r}
 ggplot(muestra, aes(x = Sex, fill = as.factor(Survived))) +
   geom_bar(position = "fill") +
@@ -55,8 +58,48 @@ ggplot(muestra, aes(x = GrupoTarifa, fill = as.factor(Survived))) +
   labs(x = "Grupo de tarifa", y = "Proporción")
 ```
 
+# Selección de variables
 
-# Analisis de mlg 
+```{r}
+# Preparacion
+
+muestra$Survived <- factor(muestra$Survived, levels = c(0, 1), labels = c("NO", "SI"))
+muestra$Sex      <- factor(muestra$Sex)
+muestra$Embarked <- factor(muestra$Embarked)
+
+# Categorías de referencia (elegí las que tengan sentido para vos)
+muestra$Sex      <- relevel(muestra$Sex, ref = "male")
+muestra$Embarked <- relevel(muestra$Embarked, ref = "S")
+
+# Datos para el modelo (sin PassengerId)
+dat <- subset(muestra, select = c(Survived, Sex, Age, GrupoTarifa, Embarked))
+
+
+m_completo <- glm(Survived ~ Sex + Age + GrupoTarifa + Embarked,
+                  family = binomial, data = dat)
+m_nulo     <- glm(Survived ~ 1, family = binomial, data = dat)
+
+# AIC (usamos este)
+step(m_completo, direction = "backward")
+step(m_nulo, scope = formula(m_completo), direction = "forward")
+
+# BIC (más parsimonioso) Hace un modelo solo con la variable Sex
+# n <- nrow(dat)
+# step(m_completo, direction = "backward", k = log(n))
+# step(m_nulo, scope = formula(m_completo), direction = "forward", k = log(n))
+
+```
+
+
+
+
+
+
+
+
+
+# Analisis de mlg
+
 ```{r}
 datos_agrup <- muestra %>%
   group_by(Sex, GrupoEdad, GrupoTarifa, Embarked) %>%
@@ -112,7 +155,8 @@ data.frame(
 )
 ```
 
-Hacemos selección de variables 
+Hacemos selección de variables
+
 ```{r}
 
 muestra$Sex      <- factor(muestra$Sex)
@@ -132,11 +176,12 @@ summary(modelo_1)
 ```{r}
 table(muestra$Embarked, muestra$Survived)
 ```
+
 ```{r}
 add1(modelo_1, scope = ~ . + Sex:Age + Sex:logFare + Sex:Embarked + Age:logFare + Age:Embarked + logFare:Embarked, test = "LRT")
 ```
 
-Se evaluó la incorporación de cada interacción doble al modelo de efectos principales mediante tests de razón de verosimilitud, y ninguna resultó significativa (todos los p-valores > 0.40), además de que el AIC no mejoraba en ningún caso. El modelo con todas las interacciones dobles presentó cuasi-separación, debido a que solo 8 pasajeros embarcaron en Queenstown. Por parsimonia, se mantiene el modelo de efectos principales.
+Se evaluó la incorporación de cada interacción doble al modelo de efectos principales mediante tests de razón de verosimilitud, y ninguna resultó significativa (todos los p-valores \> 0.40), además de que el AIC no mejoraba en ningún caso. El modelo con todas las interacciones dobles presentó cuasi-separación, debido a que solo 8 pasajeros embarcaron en Queenstown. Por parsimonia, se mantiene el modelo de efectos principales.
 
 ```{r}
 # ============================================================
@@ -165,6 +210,7 @@ anova(modelo_1, modelo_1_age2, test = "LRT")
 # Complemento con AIC
 AIC(modelo_1, modelo_1a, modelo_1b, modelo_1c)
 ```
+
 ```{r}
 # 1) Modelo final (efectos principales reducidos)
 modelo_final <- glm(Survived ~ Sex + logFare,
@@ -242,10 +288,7 @@ coords(Curva.ROC, "best", best.method = "youden",
        ret = c("threshold", "sensitivity", "specificity"))
 ```
 
-
 ```{r}
 #3. Bondad de ajuste de cada modelo (deviance residual contra una chi-cuadrado):
 sapply(modelos, function(m) pchisq(deviance(m), df.residual(m), lower.tail = FALSE))
 ```
-
-
