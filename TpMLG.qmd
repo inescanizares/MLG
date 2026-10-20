@@ -9,25 +9,23 @@ library(titanic)
 library(dplyr)
 library(ggplot2)
 library(glmtoolbox); library(statmod); library(pROC); library(tidyr)
+library(caret)
 ```
 
 ```{r}
 datos <- titanic_train %>% select(-Name, -SibSp, -Parch, -Ticket, -Cabin, -Pclass)
 set.seed(147)
-muestra <- datos %>%
-  filter(!is.na(Age), !is.na(Fare), Embarked != "") %>%
-  slice_sample(n = 200)
+datos <- datos %>%
+  filter(!is.na(Age), !is.na(Fare), Embarked != "")
 
-muestra$GrupoTarifa <- cut(muestra$Fare,
-                         breaks = c(-0.1, 8.0, 14.0, 30.0, Inf),
-                         labels = c("1", "2", "3", "4"),
-                         right = TRUE)
-# muestra$GrupoEdad <- cut(muestra$Age,
-#                           breaks = c(0, 12, 18, 40, 60, Inf),
-#                           labels = c("Niño", "Adolescente", "Adulto joven", "Adulto", "Mayor"),
-#                           right = TRUE)
-# 
-# table(muestra$GrupoTarifa, muestra$Survived)
+datos$Survived <- factor(datos$Survived, levels = c(0, 1), labels = c("NO", "SI"))
+datos$logFare <- log(datos$Fare + 1)
+
+filas <- createDataPartition(datos$Survived, p = 0.8)[[1]]
+
+train <- slice(datos, filas)
+test  <- slice(datos, -filas)
+
 ```
 
 # Análisis Descriptivo
@@ -35,203 +33,120 @@ muestra$GrupoTarifa <- cut(muestra$Fare,
 Grafico de la variable respuesta
 
 ```{r}
-ggplot(muestra, aes(x = Survived)) +
+ggplot(datos, aes(x = Survived)) +
   geom_bar() +
   labs(x = "Sobrevivió", y = "Cantidad")
 ```
 
 ```{r}
-ggplot(muestra, aes(x = Sex, fill = as.factor(Survived))) +
+ggplot(datos, aes(x = Sex, fill = as.factor(Survived))) +
   geom_bar(position = "fill") +
   labs(y = "Proporción")
 
-ggplot(muestra, aes(x = factor(Embarked), fill = as.factor(Survived))) +
+ggplot(datos, aes(x = factor(Embarked), fill = as.factor(Survived))) +
   geom_bar(position = "fill") +
   labs(x = "Embarque", y = "Proporción")
 
-ggplot(muestra, aes(x = GrupoEdad, fill = as.factor(Survived))) +
-  geom_bar(position = "fill") +
-  labs(x = "Grupo de edad", y = "Proporción")
+ggplot(datos, aes(x = Age, y = Survived, color = Survived)) +
+  geom_jitter(height = 0.2, alpha = 0.6) +
+  labs(x = "Edad", y = "Sobrevivió", color = "Sobrevivió")
 
-ggplot(muestra, aes(x = GrupoTarifa, fill = as.factor(Survived))) +
-  geom_bar(position = "fill") +
-  labs(x = "Grupo de tarifa", y = "Proporción")
+
+ggplot(datos, aes(x = Survived, y = log(Fare + 1), fill = Survived)) +
+  geom_boxplot() +
+  labs(x = "Sobrevivió", y = "log(Fare + 1)") +
+  guides(fill = "none")
 ```
 
 # Selección de variables
 
-```{r}
+```{r, echo = FALSE}
 # Preparacion
 
-muestra$Survived <- factor(muestra$Survived, levels = c(0, 1), labels = c("NO", "SI"))
-muestra$Sex      <- factor(muestra$Sex)
-muestra$Embarked <- factor(muestra$Embarked)
+train$Sex      <- factor(train$Sex)
+train$Embarked <- factor(train$Embarked)
 
 # Categorías de referencia (elegí las que tengan sentido para vos)
-muestra$Sex      <- relevel(muestra$Sex, ref = "male")
-muestra$Embarked <- relevel(muestra$Embarked, ref = "S")
-
-# Datos para el modelo (sin PassengerId)
-dat <- subset(muestra, select = c(Survived, Sex, Age, GrupoTarifa, Embarked))
+train$Sex      <- relevel(train$Sex, ref = "male")
+train$Embarked <- relevel(train$Embarked, ref = "S")
 
 
-m_completo <- glm(Survived ~ Sex + Age + GrupoTarifa + Embarked,
-                  family = binomial, data = dat)
-m_nulo     <- glm(Survived ~ 1, family = binomial, data = dat)
+m_completo <- glm(Survived ~ Sex + Age + logFare + Embarked + Sex:Age + Sex:logFare +
+                    Sex:Embarked + Age:logFare + Age:Embarked + logFare:Embarked,
+                  family = binomial, data = train)
+m_nulo     <- glm(Survived ~ 1, family = binomial, data = train)
 
 # AIC (usamos este)
 step(m_completo, direction = "backward")
 step(m_nulo, scope = formula(m_completo), direction = "forward")
 
-# BIC (más parsimonioso) Hace un modelo solo con la variable Sexx
-# n <- nrow(dat)
-# step(m_completo, direction = "backward", k = log(n))
-# step(m_nulo, scope = formula(m_completo), direction = "forward", k = log(n))
 
 ```
 
+Se partió de un modelo con los efectos principales de Sex, Age, logFare y Embarked, y se evaluaron las interacciones de a pares mediante el criterio de información de Akaike (AIC) y la deviance de cada modelo, con los métodos backward y forward sobre el conjunto de entrenamiento (n = 571). Ambos procedimientos convergieron al mismo modelo final:
+
+Survived ~ Sex + logFare + Embarked + Age + Sex:Age + logFare:Age
+
+# Probamos linealidad de la predictoras continuas
+
+```{r}
+# Age: cuartiles calculados en train
+cortes_age <- unique(quantile(train$Age, probs = seq(0, 1, 0.25)))
+train$AgeF <- cut(train$Age, breaks = cortes_age, include.lowest = TRUE)
+
+# logFare: cuartiles calculados en train
+cortes_fare <- unique(quantile(train$logFare, probs = seq(0, 1, 0.25)))
+train$logFareF <- cut(train$logFare, breaks = cortes_fare, include.lowest = TRUE)
+
+table(train$AgeF)
+table(train$logFareF)
+
+# linealidad de Age
+# Age continua (tu modelo final)
+m_age_cont <- glm(Survived ~ Sex + logFare + Embarked + Age + Sex:Age + logFare:Age,
+                  family = binomial, data = train)
+
+# Age como factor (la variable reemplaza a Age también en las interacciones)
+m_age_fac <- glm(Survived ~ Sex + logFare + Embarked + AgeF + Sex:AgeF + logFare:AgeF,
+                 family = binomial, data = train)
 
 
+m_age_ambas <- update(m_age_cont, . ~ . + AgeF)
+anova(m_age_cont, m_age_ambas, test = "Chisq")
+
+# Age: no hay evidencia suficiente para decir que no hay no linealidad (la vble queda como esta)
+
+# linealidad de logFare
+# logFare continua (tu modelo final)
+m_fare_cont <- m_age_cont
+
+# logFare como factor
+m_fare_fac <- glm(Survived ~ Sex + logFareF + Embarked + Age + Sex:Age + logFareF:Age,
+                  family = binomial, data = train)
+
+m_fare_ambas <- update(m_fare_cont, . ~ . + logFareF)
+anova(m_fare_cont, m_fare_ambas, test = "Chisq")
+
+# logFare: no hay evidencia suficiente para decir que no hay no linealidad (la vble queda como esta)
+
+```
+```{r}
+# Modelo final
+modelo_final <- glm(Survived ~ Sex + logFare + Embarked + Age + Sex:Age + logFare:Age, 
+                    family = binomial("logit"), data = train)
+summary(modelo_final)
 
 
-
+```
 
 
 
 # Analisis de mlg
 
-```{r}
-datos_agrup <- muestra %>%
-  group_by(Sex, GrupoEdad, GrupoTarifa, Embarked) %>%
-  summarise(yi = sum(Survived), ni = n(), .groups = "drop")
-```
-
-```{r}
-# 1. Calculamos la proporción de supervivencia por grupo de tarifa
-datos_agrupados <- muestra %>%
-  group_by(GrupoTarifa) %>%
-  summarise(prop_sobrevivientes = mean(Survived, na.rm = TRUE))
-
-# 2. Armamos el gráfico con la estructura que pediste
-ggplot(datos_agrupados, aes(x = GrupoTarifa, y = prop_sobrevivientes)) + 
-  geom_point(fill = "orange", shape = 21, size = 3) + 
-  xlab("Grupo de tarifa") + 
-  ylab("Proporción de supervivencia") + 
-  ggtitle("Proporción de supervivencia según el grupo de tarifa") + 
-  theme_minimal()
-```
-
-```{r}
-m_logit <- glm(yi/ni ~ Sex + GrupoEdad + GrupoTarifa + Embarked,
-               family = binomial(link = "logit"),
-               data = datos_agrup, weights = ni)
-m_probit  <-glm(yi/ni ~ Sex + GrupoEdad + GrupoTarifa + Embarked,
-               family = binomial(link = "probit"),
-               data = datos_agrup, weights = ni)
-m_cloglog  <-glm(yi/ni ~ Sex + GrupoEdad + GrupoTarifa + Embarked,
-               family = binomial(link = "cloglog"),
-               data = datos_agrup, weights = ni) #lo probamos de onda nomas 
-
-AIC(m_logit, m_probit, m_cloglog)
-```
-
-```{r}
-#1. Ajustar los modelos con la misma base agrupada
-f <- yi/ni ~ Sex + GrupoEdad + GrupoTarifa + Embarked
-
-m_logit   <- glm(f, family = binomial("logit"),   data = datos_agrup, weights = ni)
-m_probit  <- glm(f, family = binomial("probit"),  data = datos_agrup, weights = ni)
-m_cloglog <- glm(f, family = binomial("cloglog"), data = datos_agrup, weights = ni)
-
-#2. Comparar AIC, BIC y deviance en una sola tabla:
-modelos <- list(Logit = m_logit, Probit = m_probit, Cloglog = m_cloglog)
-
-data.frame(
-  Enlace   = names(modelos),
-  AIC      = sapply(modelos, AIC),
-  BIC      = sapply(modelos, BIC),
-  Deviance = sapply(modelos, deviance),
-  gl       = sapply(modelos, df.residual)
-)
-```
-
-Hacemos selección de variables
-
-```{r}
-
-muestra$Sex      <- factor(muestra$Sex)
-muestra$Embarked <- factor(muestra$Embarked)
-muestra$logFare  <- log(muestra$Fare + 1)
-
-# =====================================================
-# ETAPA 1: ¿hacen falta interacciones?
-# =====================================================
-# Modelo 1: efectos principales
-modelo_1 <- glm(Survived ~ Sex + Age + logFare + Embarked,
-                family = binomial(link = "logit"), data = muestra)
-summary(modelo_1)
-
-```
-
-```{r}
-table(muestra$Embarked, muestra$Survived)
-```
-
-```{r}
-add1(modelo_1, scope = ~ . + Sex:Age + Sex:logFare + Sex:Embarked + Age:logFare + Age:Embarked + logFare:Embarked, test = "LRT")
-```
-
-Se evaluó la incorporación de cada interacción doble al modelo de efectos principales mediante tests de razón de verosimilitud, y ninguna resultó significativa (todos los p-valores \> 0.40), además de que el AIC no mejoraba en ningún caso. El modelo con todas las interacciones dobles presentó cuasi-separación, debido a que solo 8 pasajeros embarcaron en Queenstown. Por parsimonia, se mantiene el modelo de efectos principales.
-
-```{r}
-# ============================================================
-# ETAPA 2: ¿se puede sacar alguna variable del modelo 1?
-# ============================================================
-drop1(modelo_1, test = "LRT") # Esto te da un p-valor por variable, y para Embarked es el que vale.
-
-# Embarked (2 parámetros)
-# H0) beta_Q = beta_S = 0 | H1) al menos uno distinto de 0
-modelo_1a <- update(modelo_1, . ~ . - Embarked)
-anova(modelo_1a, modelo_1, test = "LRT")
-
-# Age
-# H0) beta(Age) = 0 | H1) beta(Age) != 0
-modelo_1b <- update(modelo_1, . ~ . - Age)
-anova(modelo_1b, modelo_1, test = "LRT")
-
-# Age y Embarked juntas
-modelo_1c <- update(modelo_1, . ~ . - Age - Embarked)
-anova(modelo_1c, modelo_1, test = "LRT")
-
-# Antes de sacar Age: ¿es un problema de forma (no linealidad)?
-modelo_1_age2 <- update(modelo_1, . ~ . + I(Age^2))
-anova(modelo_1, modelo_1_age2, test = "LRT")
-
-# Complemento con AIC
-AIC(modelo_1, modelo_1a, modelo_1b, modelo_1c)
-```
-
-```{r}
-# 1) Modelo final (efectos principales reducidos)
-modelo_final <- glm(Survived ~ Sex + logFare,
-                    family = binomial(link = "logit"), data = muestra)
-summary(modelo_final)
-
-# 2) Chequeos del predictor sobre el modelo reducido
-add1(modelo_final, scope = ~ . + Sex:logFare, test = "LRT")      # interacción
-
-modelo_lin_cat <- glm(Survived ~ Sex + logFare + GrupoTarifa,    # linealidad de logFare
-                      family = binomial(link = "logit"), data = muestra)
-anova(modelo_final, modelo_lin_cat, test = "LRT")
-
-# 3) Si todo está bien, seguís con el bloque anterior:
-#    hltest, enlace (AIC, test de eta^2, gráfico), residuos cuantil, OR con IC, ROC
-```
-
-Seguimos con el analisis de mlg
 
 ```{r}
 # ===== Bondad de ajuste (Hosmer-Lemeshow) =====
+
 # H0) el modelo ajusta bien
 hltest(modelo_final)
 # p-value > 0.05 entonces no RH0, el modelo ajusta bien 
@@ -242,40 +157,94 @@ m_cloglog <- update(modelo_final, family = binomial("cloglog"))
 AIC(modelo_final, m_probit, m_cloglog)
 
 # b) Test de eta^2 (H0: el enlace es adecuado)
-muestra$eta2 <- predict(modelo_final)^2
-modelo_eta2  <- update(modelo_final, . ~ . + eta2)
-anova(modelo_final, modelo_eta2, test = "LRT")
+train$eta2 <- predict(m_cloglog)^2
+modelo_eta2  <- update(m_cloglog, . ~ . + eta2)
+anova(m_cloglog, modelo_eta2, test = "LRT")
+
+# Nos quedamos con cloglog
 
 # c) Gráfico: proporciones observadas por deciles de eta + curvas de los 3 enlaces
-muestra$eta <- predict(modelo_final)
-curvas <- data.frame(eta = muestra$eta,
-                     Logit   = fitted(modelo_final),
-                     Probit  = fitted(m_probit),
-                     Cloglog = fitted(m_cloglog)) %>%
-  pivot_longer(-eta, names_to = "Modelo", values_to = "p")
+# train$eta <- predict(modelo_final)
+# curvas <- data.frame(eta = train$eta,
+#                      Logit   = fitted(modelo_final),
+#                      Probit  = fitted(m_probit),
+#                      Cloglog = fitted(m_cloglog)) %>%
+#   pivot_longer(-eta, names_to = "Modelo", values_to = "p")
+# 
+# obs <- train %>%
+#   mutate(grupo = cut(eta, breaks = unique(quantile(eta, seq(0, 1, 0.1))),
+#                      include.lowest = TRUE)) %>%
+#   group_by(grupo) %>%
+#   summarise(eta = mean(eta), prop = mean(Survived == "SI"), n = n())
+# 
+# ggplot() +
+#   geom_line(data = curvas, aes(eta, p, color = Modelo), linewidth = 1) +
+#   geom_point(data = obs, aes(eta, prop, size = n), fill = "orange", shape = 21) +
+#   labs(x = expression(hat(eta)~"(logit)"), y = "Proporción de supervivencia", size = "Pasajeros") +
+#   theme_minimal()
 
-obs <- muestra %>%
-  mutate(grupo = cut(eta, breaks = unique(quantile(eta, seq(0, 1, 0.1))),
-                     include.lowest = TRUE)) %>%
-  group_by(grupo) %>%
-  summarise(eta = mean(eta), prop = mean(Survived), n = n())
+# c) Gráfico: proporciones observadas por deciles de eta + curvas de los 3 enlaces
+train$SurvNum <- as.numeric(train$Survived == "SI")
+
+modelos <- list(Logit   = modelo_final,
+                Probit  = m_probit,
+                Cloglog = m_cloglog)
+
+# Curvas: cada modelo con su propio eta, ordenado
+curvas <- bind_rows(lapply(names(modelos), function(nm) {
+  data.frame(Modelo = nm,
+             eta = predict(modelos[[nm]]),
+             p   = fitted(modelos[[nm]]))
+})) %>%
+  arrange(Modelo, eta)
+
+# Proporciones observadas por deciles del eta de cada modelo
+obs <- bind_rows(lapply(names(modelos), function(nm) {
+  data.frame(Modelo = nm,
+             eta = predict(modelos[[nm]]),
+             y = train$SurvNum) %>%
+    mutate(grupo = cut(eta,
+                       breaks = unique(quantile(eta, seq(0, 1, 0.1))),
+                       include.lowest = TRUE)) %>%
+    group_by(Modelo, grupo) %>%
+    summarise(eta = mean(eta), prop = mean(y), n = n(), .groups = "drop")
+}))
 
 ggplot() +
-  geom_line(data = curvas, aes(eta, p, color = Modelo), linewidth = 1) +
+  geom_line(data = curvas, aes(eta, p), linewidth = 1, color = "steelblue") +
   geom_point(data = obs, aes(eta, prop, size = n), fill = "orange", shape = 21) +
-  labs(x = expression(hat(eta)~"(logit)"), y = "Proporción de supervivencia", size = "Pasajeros") +
+  facet_wrap(~ Modelo, scales = "free_x") +
+  labs(x = expression(hat(eta)~"(predictor lineal de cada modelo)"),
+       y = "Proporción de supervivencia", size = "Pasajeros") +
   theme_minimal()
 
+
 # ===== Residuos cuantil =====
-rQ <- qresid(modelo_final)
-G1 <- ggplot(muestra, aes(x = fitted(modelo_final), y = rQ)) +
+rQ <- qresid(m_cloglog)
+G1 <- ggplot(train, aes(x = fitted(m_cloglog), y = rQ)) +
   geom_point(fill = "orange", shape = 21, size = 2) +
-  geom_hline(yintercept = 0) + ylim(-3, 3) +
+  geom_hline(yintercept = 0) + ylim(-4, 4) +
   geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
   labs(x = expression(hat(pi)), y = "Residuos cuantil") + theme_minimal()
-G2 <- ggplot(muestra, aes(sample = rQ)) +
+
+# Mu estimado 0.75 
+mu_cloglog <- fitted(m_cloglog)
+### Gráfico de residuos cuantil vs. probabilidades estimadas (ajuste cloglog) 
+G2 <- ggplot(train, 
+             aes(y = rQ, x = fitted(m_probit))) + 
+  geom_point(fill = "orange", shape = 21, size = 3) + 
+  geom_hline(yintercept = 0) + ylim(-4, 4) + 
+  geom_hline(yintercept =-3, linetype = "dashed") + 
+  geom_hline(yintercept = 3, linetype = "dashed") + 
+  labs(title = "Gráfico de residuos cuantil vs. las probabilidades estimadas", 
+       x = theme_minimal()
+  ) +
+  theme_minimal()
+
+G3 <- ggplot(train, aes(sample = rQ)) +
   stat_qq(fill = "orange", shape = 21, size = 2) + stat_qq_line(color = "red", linetype = "dashed") +
   labs(x = "Cuantiles teóricos", y = "Cuantiles de los residuos") + theme_minimal()
+
 gridExtra::grid.arrange(G1, G2, ncol = 2)
 
 # ===== Razones de odds con IC (Wald 95%) =====
@@ -287,6 +256,44 @@ auc(Curva.ROC)
 coords(Curva.ROC, "best", best.method = "youden",
        ret = c("threshold", "sensitivity", "specificity"))
 ```
+
+```{r}
+train$SurvNum <- as.numeric(train$Survived == "SI")
+
+modelos <- list(Logit   = modelo_final,
+                Probit  = m_probit,
+                Cloglog = m_cloglog)
+
+# Curvas: cada modelo con su propio eta, ordenado
+curvas <- bind_rows(lapply(names(modelos), function(nm) {
+  data.frame(Modelo = nm,
+             eta = predict(modelos[[nm]]),
+             p   = fitted(modelos[[nm]]))
+})) %>%
+  arrange(Modelo, eta)
+
+# Proporciones observadas por deciles del eta de cada modelo
+obs <- bind_rows(lapply(names(modelos), function(nm) {
+  data.frame(Modelo = nm,
+             eta = predict(modelos[[nm]]),
+             y = train$SurvNum) %>%
+    mutate(grupo = cut(eta,
+                       breaks = unique(quantile(eta, seq(0, 1, 0.1))),
+                       include.lowest = TRUE)) %>%
+    group_by(Modelo, grupo) %>%
+    summarise(eta = mean(eta), prop = mean(y), n = n(), .groups = "drop")
+}))
+
+ggplot() +
+  geom_line(data = curvas, aes(eta, p), linewidth = 1, color = "steelblue") +
+  geom_point(data = obs, aes(eta, prop, size = n), fill = "orange", shape = 21) +
+  facet_wrap(~ Modelo, scales = "free_x") +
+  labs(x = expression(hat(eta)~"(predictor lineal de cada modelo)"),
+       y = "Proporción de supervivencia", size = "Pasajeros") +
+  theme_minimal()
+```
+
+
 
 ```{r}
 #3. Bondad de ajuste de cada modelo (deviance residual contra una chi-cuadrado):
