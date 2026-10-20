@@ -83,7 +83,7 @@ m_nulo     <- glm(Survived ~ 1, family = binomial, data = dat)
 step(m_completo, direction = "backward")
 step(m_nulo, scope = formula(m_completo), direction = "forward")
 
-# BIC (más parsimonioso) Hace un modelo solo con la variable Sex
+# BIC (más parsimonioso) Hace un modelo solo con la variable Sexx
 # n <- nrow(dat)
 # step(m_completo, direction = "backward", k = log(n))
 # step(m_nulo, scope = formula(m_completo), direction = "forward", k = log(n))
