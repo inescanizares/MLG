@@ -168,7 +168,7 @@ tabla_edad %>%
 ```
 
 ```{r}
-# Tabla descriptiva de edad
+# Tabla descriptiva de tarifa
 tabla_tarifa <- datos %>%
   summarise(
     Media_tarifa = round(mean(Fare),2),
@@ -202,6 +202,69 @@ tabla_tarifa %>%
     full_width = FALSE
   )
 ```
+
+Graficos de la variable edad 
+```{r}
+library(ggpubr)
+p1 <- ggplot(data = datos, aes(x = Age, fill = Survived)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = Survived), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = datos, aes(x = Survived, y = Age, color = Survived)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Age", size = 15))
+final_plot
+```
+
+GRaficos de la variable Tarifa 
+
+```{r}
+library(ggpubr)
+p1 <- ggplot(data = datos, aes(x = Fare, fill = Survived)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = Survived), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = datos, aes(x = Survived, y = Fare, color = Survived)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Fare", size = 15))
+final_plot
+```
+
+Graficos de la variable log(Fare)
+
+```{r}
+p1 <- ggplot(data = datos, aes(x = log(Fare), fill = Survived)) +
+      geom_density(alpha = 0.5) +
+      scale_fill_manual(values = c("gray50", "orangered2")) +
+      geom_rug(aes(color = Survived), alpha = 0.5) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+p2 <- ggplot(data = datos, aes(x = Survived, y = log(Fare), color = Survived)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha = 0.3, width = 0.15) +
+      scale_color_manual(values = c("gray50", "orangered2")) +
+      theme_bw()
+final_plot <- ggarrange(p1, p2, legend = "top")
+final_plot <- annotate_figure(final_plot, top = text_grob("Log(Fare)", size =15))
+final_plot
+```
+
+
+
+
+
 Grafico de la variable respuesta
 
 ```{r}
@@ -302,6 +365,8 @@ anova(m_fare_cont, m_fare_ambas, test = "Chisq")
 # logFare: no hay evidencia suficiente para decir que no hay no linealidad (la vble queda como esta)
 
 ```
+
+
 ```{r}
 # Modelo final
 modelo_final <- glm(Survived ~ Sex + logFare + Embarked + Age + Sex:Age + logFare:Age, 
@@ -314,7 +379,6 @@ summary(modelo_final)
 
 
 # Analisis de mlg
-
 
 ```{r}
 # ===== Bondad de ajuste (Hosmer-Lemeshow) =====
@@ -389,12 +453,20 @@ ggplot() +
   labs(x = expression(hat(eta)~"(predictor lineal de cada modelo)"),
        y = "Proporción de supervivencia", size = "Pasajeros") +
   theme_minimal()
+```
 
+## Análisis de residuos
 
+El análisis de residuos permite evaluar la adecuación del modelo ajustado, tanto en lo que respecta a la componente sistemática como a la aleatoria.
+
+Con el objetivo de analizar la estructura del modelo, se construyó el gráfico de los residuos cuantil frente a las probabilidades estimadas bajo el enlace cloglog. 
+
+```{r, fig.cap='Gráfico de residuos cuantil vs. las probabilidades estimadas'}
 # ===== Residuos cuantil =====
 rQ <- qresid(m_cloglog)
-G1 <- ggplot(train, aes(x = fitted(m_cloglog), y = rQ)) +
-  geom_point(fill = "orange", shape = 21, size = 2) +
+
+ggplot(train, aes(x = fitted(m_cloglog), y = rQ)) +
+  geom_point(fill = "violetred", shape = 21, size = 2) +
   geom_hline(yintercept = 0) + ylim(-4, 4) +
   geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
   labs(x = expression(hat(pi)), y = "Residuos cuantil") + theme_minimal()
@@ -402,22 +474,92 @@ G1 <- ggplot(train, aes(x = fitted(m_cloglog), y = rQ)) +
 # Mu estimado 0.75 
 mu_cloglog <- fitted(m_cloglog)
 ### Gráfico de residuos cuantil vs. probabilidades estimadas (ajuste cloglog) 
-G2 <- ggplot(train, 
-             aes(y = rQ, x = fitted(m_probit))) + 
-  geom_point(fill = "orange", shape = 21, size = 3) + 
+ggplot(train, 
+             aes(y = rQ, x = fitted(m_cloglog))) + 
+  geom_point(fill = "violetred3", shape = 21, size = 2) + 
   geom_hline(yintercept = 0) + ylim(-4, 4) + 
   geom_hline(yintercept =-3, linetype = "dashed") + 
   geom_hline(yintercept = 3, linetype = "dashed") + 
-  labs(title = "Gráfico de residuos cuantil vs. las probabilidades estimadas", 
-       x = theme_minimal()
-  ) +
+  labs(x = expression(hat(pi)), y = "Residuos cuantil") +
   theme_minimal()
+```
+Además, para verificar la adecuación de la distribución supuesta de los errores, se empleó un gráfico QQ de los residuos cuantil. 
 
-G3 <- ggplot(train, aes(sample = rQ)) +
-  stat_qq(fill = "orange", shape = 21, size = 2) + stat_qq_line(color = "red", linetype = "dashed") +
-  labs(x = "Cuantiles teóricos", y = "Cuantiles de los residuos") + theme_minimal()
 
-gridExtra::grid.arrange(G1, G2, ncol = 2)
+```{r, fig.cap='Gráfico probabilístico normal con residuos cuantil'}
+ggplot(train, aes(sample = rQ)) +
+  stat_qq(distribution = qnorm, fill = "violetred3", shape = 21, size = 2) +
+  stat_qq_line(color = "red", linetype = "dashed") +
+  labs(x = "Cuantiles teóricos", y = "Cuantiles de los residuos cuantil") + theme_minimal()
+# gridExtra::grid.arrange(G1, G2, ncol = 2)
+```
+
+En dicho gráfico se observa que los puntos siguen aproximadamente la línea de referencia, con ligeras desviaciones en los extremos.  
+Por lo tanto, puede concluirse que no existen desviaciones importantes respecto a la distribución esperada, indicando un ajuste razonablemente bueno del modelo.
+ 
+ 
+## Estudio de la capacidad predictiva del modelo 
+
+La capacidad predictiva del modelo se evaluó sobre el conjunto de validación, es decir, sobre pasajeros que no participaron en la estimación de los parámetros, de modo de obtener una medida de desempeño que no esté sesgada por el ajuste. Con las probabilidades de supervivencia estimadas para esas observaciones, se construyó la curva ROC, que muestra cómo varían la sensibilidad (tasa de verdaderos positivos) y la tasa de falsos positivos (1 - especificidad) al modificar el punto de corte de clasificación. Esta curva permite analizar el equilibrio entre ambos tipos de acierto y error, y es una herramienta útil para elegir un umbral de clasificación adecuado. Complementariamente, se calculó el área bajo la curva (AUC) como resumen de la capacidad discriminante del modelo. 
+
+```{r, fig.cap='Curva ROC'}
+# Probabilidades predichas (probabilidad de Survived = 1)
+train$prob <- predict(m_cloglog, newdata = train, type = "response")
+
+curvaROC <- roc(
+  response  = train$Survived,
+  predictor = train$prob,
+  quiet     = TRUE
+)
+
+plot(curvaROC, print.auc = TRUE, col = "aquamarine3", lwd = 2)
+
+# Punto de corte óptimo (Youden)
+pc <- coords(curvaROC, "best", ret = "threshold", best.method = "youden") %>%
+  as.numeric()
+pc
+```
+ 
+El punto de corte seleccionado fue de 0.842, correspondiente al valor que maximiza simultáneamente la sensibilidad y la especificidad del modelo. Con este umbral se obtuvo la siguiente matriz de confusión, que resume el desempeño del modelo en la clasificación de los casos: 
+
+| **Predicho / Observado** | **No Sobrevivió**| **Sobrevivió** |
+| ------------------------ | :---------------:| :------------: |
+| **No Sobrevivió**        |        65        |       12       |
+| **Sobrevivió**           |        19        |      45        |
+
+El modelo logró clasificar correctamente al 78% de las observaciones del conjunto de validación, con una sensibilidad del 79% (proporción de sobrevivientes correctamente identificados) y una especificidad del 77.4% (proporción de no sobrevivientes correctamente clasificados). 
+
+```{r}
+#| include: false
+test$prob <- predict(m_cloglog, newdata = test, type = "response")
+test$pred <- ifelse(test$prob > best_cut[1,1], "SI", "NO")
+
+confusionMatrix(
+  factor(test$pred, levels = c("NO", "SI")),
+  factor(test$Survived, levels = c("NO", "SI")),
+  positive = "SI"
+)
+```
+ 
+# Resultados  
+
+En esta sección se presentan los principales hallazgos obtenidos a partir del modelo final ajustado. En primer lugar, se exponen las razones de odds estimadas para cada variable significativa, seguidas por la representación gráfica de las mismas. Posteriormente, se incluyen las curvas ajustadas que ilustran la probabilidad predicha de diabetes bajo diferentes combinaciones de factores.
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+```{r}
 
 # ===== Razones de odds con IC (Wald 95%) =====
 exp(cbind(OR = coef(modelo_final), confint.default(modelo_final)))
@@ -465,9 +607,3 @@ ggplot() +
   theme_minimal()
 ```
 
-
-
-```{r}
-#3. Bondad de ajuste de cada modelo (deviance residual contra una chi-cuadrado):
-sapply(modelos, function(m) pchisq(deviance(m), df.residual(m), lower.tail = FALSE))
-```
