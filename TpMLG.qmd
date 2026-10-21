@@ -10,6 +10,7 @@ library(dplyr)
 library(ggplot2)
 library(glmtoolbox); library(statmod); library(pROC); library(tidyr)
 library(caret)
+library(kableExtra)
 ```
 
 ```{r}
@@ -30,6 +31,177 @@ test  <- slice(datos, -filas)
 
 # Análisis Descriptivo
 
+A continuación se presenta una visión general de las características clave de la población estudiada.
+```{r}
+tabla_supervivencia <- datos %>%
+  count(Survived) %>%
+  mutate(
+    Categoria = ifelse(Survived == 1, "Sí", "No"),
+    Porcentaje = round(100 * n / sum(n), 2)
+  ) %>%
+  dplyr::select(Categoria, Frecuencia = n, Porcentaje) %>%
+  bind_rows(
+    tibble(
+      Categoria = "Total",
+      Frecuencia = sum(.$Frecuencia),
+      Porcentaje = 100
+    )
+  )
+
+# Mostrar tabla 
+tabla_supervivencia %>%
+  kable(
+    caption = "Frecuencias absolutas y relativas de supervivencia",
+    col.names = c("Sobrevivió", "Frecuencia", "Porcentaje (%)"),
+    align = "c",
+    format = "latex",    
+    booktabs = TRUE       
+  ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "caption_position_bottom"),
+    full_width = FALSE
+  )
+```
+
+# ```{r, eval=FALSE}
+# # resumen general de variables
+# skim(datos)
+# ```
+
+```{r}
+# Analisis variables explicativas categoricas
+
+# Frecuencias absolutas y relativas de OBESIDAD
+tabla_sexo <- datos %>%
+  count(Sex) %>%
+  mutate(
+    Categoria = case_when(
+      Sex == "male" ~ "Masculino",
+      Sex == "female" ~ "Femenino",
+    ),
+    Porcentaje = round(100 * n / sum(n), 2)
+  ) %>%
+  dplyr::select(Categoria, Frecuencia = n, Porcentaje) %>% 
+  # Agregar fila de totales
+  rbind(c("Total", sum(.$Frecuencia), 100))
+
+# Mostrar tabla 
+tabla_sexo %>%
+  kable(
+    caption = "Frecuencias absolutas y relativas de sexo",
+    col.names = c("Sexo", "Frecuencia", "Porcentaje (%)"),
+    align = "c",
+    format = "latex",    
+    booktabs = TRUE       
+  ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "caption_position_bottom"),
+    full_width = FALSE
+  )
+```
+
+```{r}
+# Frecuencias absolutas y relativas de EMBARKED
+tabla_embarked <- datos %>%
+  count(Embarked) %>%
+  mutate(
+    Categoria = case_when(
+      Embarked == "S" ~ "S",
+      Embarked == "Q" ~ "Q",
+      Embarked == "C" ~ "C"
+    ),
+    Porcentaje = round(100 * n / sum(n), 2)
+  ) %>%
+  dplyr::select(Categoria, Frecuencia = n, Porcentaje) %>% 
+  # Agregar fila de totales
+  rbind(c("Total", sum(.$Frecuencia), 100))
+
+# Mostrar tabla 
+tabla_embarked %>%
+  kable(
+    caption = "Frecuencias absolutas y relativas de Embarcación",
+    col.names = c("Embarcación", "Frecuencia", "Porcentaje (%)"),
+    align = "c",
+    format = "latex",    
+    booktabs = TRUE       
+  ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "caption_position_bottom"),
+    full_width = FALSE
+  )
+```
+
+```{r}
+# Tabla descriptiva de edad
+tabla_edad <- datos %>%
+  summarise(
+    Media_edad = round(mean(Age),2),
+    Mediana_edad = median(Age),
+    DE_edad = round(sd(Age),2),
+    Min_edad = min(Age),
+    Max_edad = max(Age)
+  ) %>%
+  pivot_longer(everything()) %>%
+  separate(name, into = c("Estadístico", "Variable"), sep = "_") %>%
+  pivot_wider(names_from = Estadístico, values_from = value) %>%
+  mutate(
+    Variable = case_when(
+      Variable == "Age" ~ "Edad",
+      TRUE ~ Variable
+    )
+  ) %>%
+  dplyr::select(Variable, Media, Mediana, DE, Min, Max)
+
+# Mostrar tabla en formato LaTeX
+tabla_edad %>%
+  kable(
+    caption = "Estadísticas descriptivas de la variable edad",
+    col.names = c("Variable", "Media", "Mediana", "DE", "Mínimo", "Máximo"),
+    align = "c",
+    format = "latex",
+    booktabs = TRUE
+  ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "caption_position_bottom"),
+    full_width = FALSE
+  )
+```
+
+```{r}
+# Tabla descriptiva de edad
+tabla_tarifa <- datos %>%
+  summarise(
+    Media_tarifa = round(mean(Fare),2),
+    Mediana_tarifa = median(Fare),
+    DE_tarifa = round(sd(Fare),2),
+    Min_tarifa = min(Fare),
+    Max_tarifa = max(Fare)
+  ) %>%
+  pivot_longer(everything()) %>%
+  separate(name, into = c("Estadístico", "Variable"), sep = "_") %>%
+  pivot_wider(names_from = Estadístico, values_from = value) %>%
+  mutate(
+    Variable = case_when(
+      Variable == "Fare" ~ "Tarifa",
+      TRUE ~ Variable
+    )
+  ) %>%
+  dplyr::select(Variable, Media, Mediana, DE, Min, Max)
+
+# Mostrar tabla en formato LaTeX
+tabla_tarifa %>%
+  kable(
+    caption = "Estadísticas descriptivas de la variable edad",
+    col.names = c("Variable", "Media", "Mediana", "DE", "Mínimo", "Máximo"),
+    align = "c",
+    format = "latex",
+    booktabs = TRUE
+  ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "caption_position_bottom"),
+    full_width = FALSE
+  )
+```
 Grafico de la variable respuesta
 
 ```{r}
