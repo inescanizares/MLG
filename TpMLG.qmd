@@ -114,6 +114,10 @@ test  <- slice(datos, -filas)
 
 # Introducción 
 
+El hundimiento del RMS Titanic, ocurrido en 1912 durante su viaje inaugural, es una de las tragedias marítimas más recordadas de la historia. Considerado el mayor transatlántico de su época y casi insumergible, su naufragio causó la muerte de más de 1.500 de las aproximadamente 2.200 personas a bordo y dejó en evidencia graves falencias de seguridad, como la escasez de botes salvavidas. El suceso provocó una conmoción mundial e impulsó cambios en la normativa internacional. Los datos de sus pasajeros permiten, además, estudiar si la supervivencia estuvo asociada a características individuales como el sexo, la edad, la tarifa abonada o el puerto de embarque, y contrastar con evidencia empírica la norma de “mujeres y niños primero”.
+
+En este trabajo se busca identificar los factores con mayor influencia en la probabilidad de supervivencia de los pasajeros, mediante un Modelo Lineal Generalizado con distribución binomial y función de enlace logit sobre la base de datos del Titanic construida a partir de registros históricos reales.
+
 # Material y métodos  
 
 
