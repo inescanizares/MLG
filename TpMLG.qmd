@@ -41,7 +41,7 @@ editor:
     % Carrera y Alumnos
     {\Large Integrantes: \\[0.15cm]
      Cañizares María Inés \\[0.15cm]
-     Zame, Lisbeth \par}
+     Zamer, Lisbeth \par}
     \vspace{1cm}
     {\Large Licenciatura en Estadística \par}
     % Fecha abajo del todo
@@ -73,6 +73,7 @@ library(kableExtra)
 library(pROC)
 library(caret)
 library(broom) # Extrae info de los modelos ajustados
+library(glmtoolbox)
 
 
 # Estilo global de gráficos ggplot2
@@ -127,7 +128,9 @@ La base de datos utilizada contiene información de 891 pasajeros. Dado que pres
 
 La variable respuesta es Survived, que indica si el pasajero sobrevivió al naufragio: toma el valor 1 si sobrevivió (SÍ) y 0 si no sobrevivió (NO). Al tratarse de una variable binaria, se asume que cada observación sigue una distribución Bernoulli.
 
-El análisis comenzó con un estudio descriptivo de las variables, para explorar su distribución y su relación con la supervivencia. Luego se seleccionaron las variables del modelo sobre el conjunto de entrenamiento y se ajustó el modelo final con enlace logit. Se evaluó su ajuste y su capacidad predictiva sobre el conjunto de prueba. Por último, se compararon distintas funciones de enlace (logit, probit y cloglog), con el fin de identificar qué factores estuvieron más fuertemente asociados a la supervivencia.
+El análisis comenzó con un estudio descriptivo de las variables, para explorar su distribución y su relación con la supervivencia. Luego se seleccionaron las variables del modelo sobre el conjunto de entrenamiento y se ajustó el modelo final con enlace logit. Se evaluó su ajuste y su capacidad predictiva sobre el conjunto de prueba. Por último, se compararon distintas funciones de enlace (logit, probit y cloglog), con el fin de identificar qué factores estuvieron más fuertemente asociados a la supervivencia.  
+
+\newpage
 
 
 Las variables explicativas incluidas en el análisis se describen a continuación: 
@@ -153,11 +156,12 @@ Las variables explicativas incluidas en el análisis se describen a continuació
 # Análisis Descriptivo
 
 A continuación se presenta una visión general de las características clave de la población estudiada.
+
 ```{r}
 tabla_supervivencia <- datos %>%
   count(Survived) %>%
   mutate(
-    Categoria = ifelse(Survived == 1, "Sí", "No"),
+    Categoria = ifelse(Survived == "SI", "Sí", "No"),
     Porcentaje = round(100 * n / sum(n), 2)
   ) %>%
   dplyr::select(Categoria, Frecuencia = n, Porcentaje) %>%
@@ -168,7 +172,6 @@ tabla_supervivencia <- datos %>%
       Porcentaje = 100
     )
   )
-
 # Mostrar tabla 
 tabla_supervivencia %>%
   kable(
@@ -184,10 +187,6 @@ tabla_supervivencia %>%
   )
 ```
 
-# ```{r, eval=FALSE}
-# # resumen general de variables
-# skim(datos)
-# ```
 
 ```{r}
 # Analisis variables explicativas categoricas
@@ -326,7 +325,8 @@ tabla_tarifa %>%
 
 # FALTAN CONCLUSIONES DE TABLAS DESPUES DE REPRODUCIR  
 
-```{r fig 1}
+```{r fig-1}
+#| fig.cap: "Proporción de pasajeros sobrevivientes según sexo"
 ggplot(datos, aes(x = Sex, fill = factor(Survived))) +
   geom_bar(position = "fill", width = 0.7) +
   scale_fill_manual(
@@ -346,7 +346,8 @@ ggplot(datos, aes(x = Sex, fill = factor(Survived))) +
 
 Se observa que la proporción de pasajeros que sobrevivieron es más alta para aquellos con sexo femenino en comparacón a los pasajeros  masculinos. 
 
-```{r fig 2}
+```{r fig-2}
+#| fig.cap: "Proporción de pasajeros sobrevivientes según lugar de embarcación"
 ggplot(datos, aes(x = Embarked, fill = factor(Survived))) +
   geom_bar(position = "fill", width = 0.7) +
   scale_fill_manual(
@@ -366,9 +367,8 @@ ggplot(datos, aes(x = Embarked, fill = factor(Survived))) +
 
 Se observa una mayor proporción de sobrevivientes entre los pasajeros que embarcaron en C (aprox. 60%) en comparación con Q y S (aprox. 28% y 36%), lo que sugiere una posible asociación entre el puerto de embarque y la supervivencia. 
 
-Graficos de la variable edad 
 ```{r}
-
+#| fig.cap: "Distribución de la edad según supervivencia"
 p1 <- ggplot(data = datos, aes(x = Age, fill = Survived)) +
       geom_density(alpha = 0.5) +
       scale_fill_manual(
@@ -391,9 +391,9 @@ p2 <- ggplot(data = datos, aes(x = Survived, y = Age, color = Survived)) +
       scale_color_manual(
         values = c("cadetblue4", "pink3"),
         name = "Supervivencia",
-        labels = etiquetas
+        labels = c("No sobrevivió", "Sobrevivió")
       ) +
-      scale_x_discrete(labels = etiquetas) +
+      scale_x_discrete(labels = c("No sobrevivió", "Sobrevivió")) +
       labs(x = "Supervivencia", y = "Edad") +
       theme_bw()
 
@@ -404,10 +404,8 @@ final_plot
 La distribución de la edad es similar entre sobrevivientes y no sobrevivientes, con medianas casi idénticas (aprox. 28 años), por lo que la edad parece no estar fuertemente asociada a la supervivencia. Se observa, sin embargo, una mayor proporción de sobrevivientes entre los niños pequeños, y una leve mayor presencia de no sobrevivientes en edades avanzadas. 
 
 
-GRaficos de la variable Tarifa 
-
 ```{r}
-
+#| fig.cap: "Distribución de la log(Tarifa) según supervivencia"
 p1 <- ggplot(data = datos, aes(x = logFare, fill = Survived)) +
       geom_density(alpha = 0.5) +
       scale_fill_manual(
@@ -447,15 +445,16 @@ La tarifa pagada parece estar asociada a la supervivencia: los pasajeros que sob
 # Modelado estadístico
 
 El trabajo se realizará bajo el enfoque de modelos lineales generalizados, utilizando lo desarrollado por Nelder y Wedderburn. 
+
 ## Selección del modelo
 
-```{r, echo = FALSE}
+```{r, results='hide'}
 # Preparacion
 
 train$Sex      <- factor(train$Sex)
 train$Embarked <- factor(train$Embarked)
 
-# Categorías de referencia (elegí las que tengan sentido para vos)
+# Categorías de referencia 
 train$Sex      <- relevel(train$Sex, ref = "male")
 train$Embarked <- relevel(train$Embarked, ref = "S")
 
@@ -472,13 +471,14 @@ step(m_nulo, scope = formula(m_completo), direction = "forward")
 
 ```
 
-Se partió de un modelo con los efectos principales de Sex, Age, logFare y Embarked, y se evaluaron las interacciones de a pares mediante el criterio de información de Akaike (AIC) y la deviance de cada modelo, con los métodos backward y forward sobre el conjunto de entrenamiento (n = 571). Ambos procedimientos convergieron al mismo modelo final:
+Para modelar la probabilidad de supervivencia de los pasajeros del Titanic, en función de las variables explicativas sexo, edad, tarifa del pasaje y puerto de embarque, se propuso emplear un modelo con función de enlace logit.
 
-Survived ~ Sex + logFare + Embarked + Age + Sex:Age + logFare:Age
+En primer lugar, se seleccionaron las variables explicativas consideradas relevantes para explicar la supervivencia de los pasajeros y se ajustó un modelo que incluyó sus efectos principales. A continuación, se evaluó la incorporación de interacciones de segundo orden entre dichas variables, utilizando los métodos de selección hacia adelante (forward) y hacia atrás (backward), con el criterio de información de Akaike (AIC) y la deviance de cada modelo. Ambos procedimientos condujeron al mismo modelo final, que incorpora las interacciones entre sexo y edad, y entre edad y tarifa del pasaje.
+
 
 # Probamos linealidad de la predictoras continuas
 
-```{r}
+```{r, results='hide'}
 # Age: cuartiles calculados en train
 cortes_age <- unique(quantile(train$Age, probs = seq(0, 1, 0.25)))
 train$AgeF <- cut(train$Age, breaks = cortes_age, include.lowest = TRUE)
@@ -504,7 +504,43 @@ m_age_ambas <- update(m_age_cont, . ~ . + AgeF)
 anova(m_age_cont, m_age_ambas, test = "Chisq")
 
 # Age: no hay evidencia suficiente para decir que no hay no linealidad (la vble queda como esta)
+``` 
 
+Con el objetivo de evaluar si la relación entre la edad y el logit de la probabilidad de supervivencia podía considerarse lineal, se compararon dos modelos alternativos.
+
+En primer lugar, se construyó un modelo que incorpora la variable edad como ordinal, dividiendo su rango en cinco categorías según los cuantiles 0.2, 0.4, 0.6 y 0.8. Posteriormente, se ajustó un segundo modelo en el que la edad se representó mediante variables indicadoras (dummies), permitiendo una relación no necesariamente lineal con la respuesta.
+
+El modelo ordinal se puede expresar como:
+
+$$
+\quad \text{logit}(\pi_i) =
+\beta_0 + \beta_1\,\text{Sexo}_i +
+\beta_2\,\text{logTarifa}_i +
+\beta_3\,\text{EmbarcacionQ}_i +
+\beta_4\,\text{EmbarcacionS}_i +
+\beta_5\,\text{Edad}_i + \\
++ \beta_6\, (\text{Sexo}_i \times \text{Edad}_i) +
+\beta_7\, (\text{logTarifa}_i \times \text{Edad}_i)
+$$
+
+Mientras que el modelo con variables indicadoras se define como:
+
+
+$$
+\begin{aligned}
+\text{logit}(\pi_i) = & \, \beta_0 + \beta_1\,\text{Sexo}_i + \beta_2\,\text{logTarifa}_i + \beta_3\,\text{EmbarcacionQ}_i + \beta_4\,\text{EmbarcacionS}_i \\
+& + \beta_5\,\text{Edad2}_i + \beta_6\,\text{Edad3}_i + \beta_7\,\text{Edad4}_i + \beta_8\,\text{Edad5}_i \\
+& + \beta_9\,(\text{Sexo}_i \times \text{Edad2}_i) + \beta_{10}\,(\text{Sexo}_i \times \text{Edad3}_i) + \beta_{11}\,(\text{Sexo}_i \times \text{Edad4}_i) + \beta_{12}\,(\text{Sexo}_i \times \text{Edad5}_i) \\
+& + \beta_{13}\,(\text{logTarifa}_i \times \text{Edad2}_i) + \beta_{14}\,(\text{logTarifa}_i \times \text{Edad3}_i) + \beta_{15}\,(\text{logTarifa}_i \times \text{Edad4}_i) + \\ \beta_{16}\,(\text{logTarifa}_i \times \text{Edad5}_i)
+\end{aligned}
+$$
+
+Finalmente, se evaluó si la incorporación de esta última variable aportaba una mejora significativa al modelo original mediante una prueba de razón de verosimilitudes.
+
+Los resultados no proporcionaron evidencia suficiente para justificar la incorporación de la edad categorizada ($p-value = 0.19$). Por lo tanto, se decidió mantener la edad como variable continua en el modelo final. 
+
+
+```{r, results='hide'}
 # linealidad de logFare
 # logFare continua (tu modelo final)
 m_fare_cont <- m_age_cont
@@ -520,116 +556,231 @@ anova(m_fare_cont, m_fare_ambas, test = "Chisq")
 
 ```
 
+Adicionalmente, dado que se cuenta con otra variable continua clave como el logaritmo de la tarifa (logTarifa), se procedió a evaluar de forma análoga si su relación con el logit de la probabilidad de supervivencia podía considerarse lineal mediante la comparación de modelos alternativos.
 
-```{r}
+En primer lugar, se construyó un modelo que incorpora la variable logTarifa como ordinal, dividiendo su rango en cinco categorías según los cuantiles 0.2, 0.4, 0.6 y 0.8. Posteriormente, se ajustó un segundo modelo en el que dicha variable se representó mediante variables indicadoras (dummies), permitiendo capturar una relación no necesariamente lineal con la respuesta.
+
+El modelo ordinal se puede expresar como: 
+
+$$
+\quad \text{logit}(\pi_i) =
+\beta_0 + \beta_1\,\text{Sexo}_i +
+\beta_2\,\text{logTarifa}_i +
+\beta_3\,\text{EmbarcacionQ}_i +
+\beta_4\,\text{EmbarcacionS}_i +
+\beta_5\,\text{Edad}_i + \\ 
+ + \beta_6\, (\text{Sexo}_i \times \text{Edad}_i) +
+\beta_7\, (\text{logTarifa}_i \times \text{Edad}_i)
+$$
+Mientras que el modelo con variables indicadoras se define como:
+
+$$
+\quad \text{logit}(\pi_i) =
+\beta_0 + \beta_1\,\text{Sexo}_i +
+\beta_2\,\text{Edad}_i +
+\beta_3\,\text{EmbarcacionQ}_i +
+\beta_4\,\text{EmbarcacionS}_i + \\
+\beta_5\,\text{logTarifa2}_i +
+\beta_6\,\text{logTarifa3}_i +
+\beta_7\,\text{logTarifa4}_i +
+\beta_8\,\text{logTarifa5}_i + 
+\beta_9\, (\text{Sexo}_i \times \text{Edad}_i) + \\ 
+\beta_{10}\,(\text{logTarifa2}_i \times \text{Edad}_i) +
+\beta_{11}\,(\text{logTarifa3}_i \times \text{Edad}_i) +
+\beta_{12}\, (\text{logTarifa4}_i \times \text{Edad}_i) +
+\beta_{13}\, (\text{logTarifa5}_i \times \text{Edad}_i) 
+$$
+Los resultados no proporcionaron evidencia suficiente para justificar la incorporación de la tarifa categorizada de forma no lineal ($p-value = 0.56$). Por lo tanto, se decidió mantener logTarifa como variable continua en el modelo final.
+
+Por lo tanto, el modelo seleccionado se expresa como:
+
+$$
+\text{logit}(\pi_i) = \ln\left(\frac{\pi_i}{1 - \pi_i}\right) =
+\beta_0 + \beta_1\,\text{Sexo}_i +
+\beta_2\,\text{logTarifa}_i +
+\beta_3\,\text{EmbarcacionQ}_i +
+\beta_4\,\text{EmbarcacionS}_i + \\
++ \beta_5\,\text{Edad}_i + 
+\beta_6\, (\text{Sexo}_i \times \text{Edad}_i) +
+\beta_7\, (\text{logTarifa}_i \times \text{Edad}_i), \quad i=\overline{1,571}
+$$
+```{r, results='hide'}
 # Modelo final
 modelo_final <- glm(Survived ~ Sex + logFare + Embarked + Age + Sex:Age + logFare:Age, 
                     family = binomial("logit"), data = train)
 summary(modelo_final)
 
-
 ```
 
+\noindent
+donde:
 
+\begin{itemize}
+  \item $\text{Sexo}_i = 
+  \begin{cases}
+    1 & \text{si } \text{Masculino} \\
+    0 & \text{si } \text{Femenino} 
+  \end{cases}$
+  
+  \item $\text{EmbarcaciónQ}_i = 
+  \begin{cases}
+    1 & \text{si } \text{Embarcación = Q}  \\
+    0 & \text{si } \text{en otro caso} 
+  \end{cases}$  
 
-# Analisis de mlg
+  \item $\text{EmbarcaciónS}_i = 
+  \begin{cases}
+    1 & \text{si } \text{Embarcación = S}  \\
+    0 & \text{si } \text{en otro caso} 
+  \end{cases}$
+\end{itemize}
 
-```{r}
+## Bondad del ajuste y estimación del modelo 
+```{r, results='hide'}
+# b) Test de eta^2 (H0: el enlace es adecuado)
+train$eta2 <- predict(modelo_final)^2
+modelo_eta2  <- update(modelo_final, . ~ . + eta2)
+anova(modelo_final, modelo_eta2, test = "LRT")
+```
+
+Se evalúa la adecuación de la función de enlace logit utilizada en el modelo aplicando el test de especificación de la función de enlace, que consiste en incorporar al modelo un término adicional cuadrático del predictor lineal estimado: 
+
+$$
+\begin{aligned}
+M1)\quad \text{logit}(\pi_i) &= \beta_0 + \beta_1\,\text{Sexo}_i +
+\beta_2\,\text{logTarifa}_i +
+\beta_3\,\text{EmbarcacionQ}_i +
+\beta_4\,\text{EmbarcacionS}_i +
+\beta_5\,\text{Edad}_i + \\
+\beta_6\, (\text{Sexo}_i \times \text{Edad}_i) +
+\beta_7\, (\text{logTarifa}_i \times \text{Edad}_i), \quad i=\overline{1,571}\\
+M2)\quad \text{logit}(\pi_i) &= \beta_0 + \beta_1\,\text{Sexo}_i +
+\beta_2\,\text{logTarifa}_i +
+\beta_3\,\text{EmbarcacionQ}_i +
+\beta_4\,\text{EmbarcacionS}_i +
+\beta_5\,\text{Edad}_i + \\
+\beta_6\, (\text{Sexo}_i \times \text{Edad}_i) +
+\beta_7\, (\text{logTarifa}_i \times \text{Edad}_i) + \hat{\eta}_i^2 \quad i=\overline{1,571}
+\end{aligned}
+$$
+El procedimiento implica ajustar un modelo extendido que incluye esta nueva variable y comparar su ajuste con el modelo original mediante una prueba de razón de verosimilitud. En este análisis, la comparación entre ambos modelos no mostró evidencia suficiente para rechazar la adecuación del enlace logit, por lo que se considera apropiado mantenerlo en el modelo final ($p-value = 0.12$).  
+
+```{r, results='hide'}
 # ===== Bondad de ajuste (Hosmer-Lemeshow) =====
-
 # H0) el modelo ajusta bien
 hltest(modelo_final)
 # p-value > 0.05 entonces no RH0, el modelo ajusta bien 
-# ===== Enlace =====
-# a) AIC de los tres enlaces con el mismo predictor
-m_probit  <- update(modelo_final, family = binomial("probit"))
-m_cloglog <- update(modelo_final, family = binomial("cloglog"))
-AIC(modelo_final, m_probit, m_cloglog)
+```
 
-# b) Test de eta^2 (H0: el enlace es adecuado)
-train$eta2 <- predict(m_cloglog)^2
-modelo_eta2  <- update(m_cloglog, . ~ . + eta2)
-anova(m_cloglog, modelo_eta2, test = "LRT")
+Además, para evaluar la bondad de ajuste del modelo, se aplicó la prueba de Hosmer y Lemeshow. Esta prueba compara las frecuencias observadas y esperadas del evento de interés en grupos formados a partir de los valores predichos por el modelo y dado el tamaño muestral disponible, se optó por dividir las observaciones en 10 grupos de igual tamaño según los valores de probabilidad predicha. Finalmente, se concluye que el modelo presenta un ajuste adecuado a los datos ($p-value = 0.46$).
 
-# Nos quedamos con cloglog
+Considerando los resultados del estudio del modelo a través de los diferentes tests de hipótesis, el ajuste realizado es el siguiente: 
 
-# c) Gráfico: proporciones observadas por deciles de eta + curvas de los 3 enlaces
-# train$eta <- predict(modelo_final)
-# curvas <- data.frame(eta = train$eta,
-#                      Logit   = fitted(modelo_final),
-#                      Probit  = fitted(m_probit),
-#                      Cloglog = fitted(m_cloglog)) %>%
-#   pivot_longer(-eta, names_to = "Modelo", values_to = "p")
+$$
+\text{logit}(\hat{\pi_i}) = \ln\left(\frac{\hat{\pi_i}}{1 - \hat{\pi_i}}\right) = 0.76 - 0.93\,\text{Sexo}_i +
+0.12\,\text{logTarifa}_i -
+1.12\,\text{EmbarcacionQ}_i -
+0.62\,\text{EmbarcacionS}_i - \\
+- 0.045\,\text{Edad}_i - 
+0.05\, (\text{Sexo}_i \times \text{Edad}_i) +
+0.019\, (\text{logTarifa}_i \times \text{Edad}_i), \quad i=\overline{1,571}
+$$
+
+```{r}
+# # ===== Enlace =====
+# # a) AIC de los tres enlaces con el mismo predictor
+# m_probit  <- update(modelo_final, family = binomial("probit"))
+# m_cloglog <- update(modelo_final, family = binomial("cloglog"))
+# AIC(modelo_final, m_probit, m_cloglog)
 # 
-# obs <- train %>%
-#   mutate(grupo = cut(eta, breaks = unique(quantile(eta, seq(0, 1, 0.1))),
-#                      include.lowest = TRUE)) %>%
-#   group_by(grupo) %>%
-#   summarise(eta = mean(eta), prop = mean(Survived == "SI"), n = n())
+# 
+# 
+# # Nos quedamos con cloglog
+# 
+# # c) Gráfico: proporciones observadas por deciles de eta + curvas de los 3 enlaces
+# # train$eta <- predict(modelo_final)
+# # curvas <- data.frame(eta = train$eta,
+# #                      Logit   = fitted(modelo_final),
+# #                      Probit  = fitted(m_probit),
+# #                      Cloglog = fitted(m_cloglog)) %>%
+# #   pivot_longer(-eta, names_to = "Modelo", values_to = "p")
+# # 
+# # obs <- train %>%
+# #   mutate(grupo = cut(eta, breaks = unique(quantile(eta, seq(0, 1, 0.1))),
+# #                      include.lowest = TRUE)) %>%
+# #   group_by(grupo) %>%
+# #   summarise(eta = mean(eta), prop = mean(Survived == "SI"), n = n())
+# # 
+# # ggplot() +
+# #   geom_line(data = curvas, aes(eta, p, color = Modelo), linewidth = 1) +
+# #   geom_point(data = obs, aes(eta, prop, size = n), fill = "orange", shape = 21) +
+# #   labs(x = expression(hat(eta)~"(logit)"), y = "Proporción de supervivencia", size = "Pasajeros") +
+# #   theme_minimal()
+# 
+# # c) Gráfico: proporciones observadas por deciles de eta + curvas de los 3 enlaces
+# train$SurvNum <- as.numeric(train$Survived == "SI")
+# 
+# modelos <- list(Logit   = modelo_final,
+#                 Probit  = m_probit,
+#                 Cloglog = m_cloglog)
+# 
+# # Curvas: cada modelo con su propio eta, ordenado
+# curvas <- bind_rows(lapply(names(modelos), function(nm) {
+#   data.frame(Modelo = nm,
+#              eta = predict(modelos[[nm]]),
+#              p   = fitted(modelos[[nm]]))
+# })) %>%
+#   arrange(Modelo, eta)
+# 
+# # Proporciones observadas por deciles del eta de cada modelo
+# obs <- bind_rows(lapply(names(modelos), function(nm) {
+#   data.frame(Modelo = nm,
+#              eta = predict(modelos[[nm]]),
+#              y = train$SurvNum) %>%
+#     mutate(grupo = cut(eta,
+#                        breaks = unique(quantile(eta, seq(0, 1, 0.1))),
+#                        include.lowest = TRUE)) %>%
+#     group_by(Modelo, grupo) %>%
+#     summarise(eta = mean(eta), prop = mean(y), n = n(), .groups = "drop")
+# }))
 # 
 # ggplot() +
-#   geom_line(data = curvas, aes(eta, p, color = Modelo), linewidth = 1) +
+#   geom_line(data = curvas, aes(eta, p), linewidth = 1, color = "steelblue") +
 #   geom_point(data = obs, aes(eta, prop, size = n), fill = "orange", shape = 21) +
-#   labs(x = expression(hat(eta)~"(logit)"), y = "Proporción de supervivencia", size = "Pasajeros") +
+#   facet_wrap(~ Modelo, scales = "free_x") +
+#   labs(x = expression(hat(eta)~"(predictor lineal de cada modelo)"),
+#        y = "Proporción de supervivencia", size = "Pasajeros") +
 #   theme_minimal()
-
-# c) Gráfico: proporciones observadas por deciles de eta + curvas de los 3 enlaces
-train$SurvNum <- as.numeric(train$Survived == "SI")
-
-modelos <- list(Logit   = modelo_final,
-                Probit  = m_probit,
-                Cloglog = m_cloglog)
-
-# Curvas: cada modelo con su propio eta, ordenado
-curvas <- bind_rows(lapply(names(modelos), function(nm) {
-  data.frame(Modelo = nm,
-             eta = predict(modelos[[nm]]),
-             p   = fitted(modelos[[nm]]))
-})) %>%
-  arrange(Modelo, eta)
-
-# Proporciones observadas por deciles del eta de cada modelo
-obs <- bind_rows(lapply(names(modelos), function(nm) {
-  data.frame(Modelo = nm,
-             eta = predict(modelos[[nm]]),
-             y = train$SurvNum) %>%
-    mutate(grupo = cut(eta,
-                       breaks = unique(quantile(eta, seq(0, 1, 0.1))),
-                       include.lowest = TRUE)) %>%
-    group_by(Modelo, grupo) %>%
-    summarise(eta = mean(eta), prop = mean(y), n = n(), .groups = "drop")
-}))
-
-ggplot() +
-  geom_line(data = curvas, aes(eta, p), linewidth = 1, color = "steelblue") +
-  geom_point(data = obs, aes(eta, prop, size = n), fill = "orange", shape = 21) +
-  facet_wrap(~ Modelo, scales = "free_x") +
-  labs(x = expression(hat(eta)~"(predictor lineal de cada modelo)"),
-       y = "Proporción de supervivencia", size = "Pasajeros") +
-  theme_minimal()
 ```
 
 ## Análisis de residuos
 
 El análisis de residuos permite evaluar la adecuación del modelo ajustado, tanto en lo que respecta a la componente sistemática como a la aleatoria.
 
-Con el objetivo de analizar la estructura del modelo, se construyó el gráfico de los residuos cuantil frente a las probabilidades estimadas bajo el enlace cloglog. 
+Con el objetivo de analizar la estructura del modelo, se construyó el gráfico de los residuos cuantil frente a las probabilidades estimadas bajo el enlace logit. 
 
 ```{r, fig.cap='Gráfico de residuos cuantil vs. las probabilidades estimadas'}
 # ===== Residuos cuantil =====
-rQ <- qresid(m_cloglog)
+rQ <- qresid(modelo_final)
 
-ggplot(train, aes(x = fitted(m_cloglog), y = rQ)) +
-  geom_point(fill = "violetred", shape = 21, size = 2) +
-  geom_hline(yintercept = 0) + ylim(-4, 4) +
-  geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "red") +
+ggplot(train, aes(x = fitted(modelo_final), y = rQ)) +
+  geom_point(fill = "cadetblue4", shape = 21, size = 2) +
+  geom_hline(yintercept = 0) +
+  ylim(-4, 4) +
+  geom_hline(yintercept = c(-3, 3), linetype = "dashed") +
   labs(x = expression(hat(pi)), y = "Residuos cuantil") + theme_minimal()
+```
+En este gráfico se observa que los residuos se distribuyen aproximadamente alrededor de cero, sin evidenciar un patrón sistemático definido. Si bien se observa una mayor concentración de observaciones en el rango de probabilidades estimadas más bajas, no se identifican tendencias claras que indiquen problemas importantes de ajuste. 
+Esto sugiere que la función de enlace logit es adecuada y que el modelo logra capturar correctamente la relación entre las variables explicativas y la probabilidad de sobrevivir. 
 
+Además, para verificar la adecuación de la distribución supuesta de los errores, se empleó un gráfico QQ de los residuos cuantil.
+
+```{r, fig.cap='Gráfico de residuos cuantil vs. las probabilidades estimadas'}
 # Mu estimado 0.75 
-mu_cloglog <- fitted(m_cloglog)
+mu_cloglog <- fitted(modelo_final)
 ### Gráfico de residuos cuantil vs. probabilidades estimadas (ajuste cloglog) 
 ggplot(train, 
-             aes(y = rQ, x = fitted(m_cloglog))) + 
+             aes(y = rQ, x = fitted(modelo_final))) + 
   geom_point(fill = "violetred3", shape = 21, size = 2) + 
   geom_hline(yintercept = 0) + ylim(-4, 4) + 
   geom_hline(yintercept =-3, linetype = "dashed") + 
@@ -637,56 +788,76 @@ ggplot(train,
   labs(x = expression(hat(pi)), y = "Residuos cuantil") +
   theme_minimal()
 ```
-Además, para verificar la adecuación de la distribución supuesta de los errores, se empleó un gráfico QQ de los residuos cuantil. 
+## ESTE A CHEQUEAR
 
 
 ```{r, fig.cap='Gráfico probabilístico normal con residuos cuantil'}
 ggplot(train, aes(sample = rQ)) +
-  stat_qq(distribution = qnorm, fill = "violetred3", shape = 21, size = 2) +
-  stat_qq_line(color = "red", linetype = "dashed") +
-  labs(x = "Cuantiles teóricos", y = "Cuantiles de los residuos cuantil") + theme_minimal()
+  stat_qq(distribution = qnorm, fill = "cadetblue4", shape = 21, size = 1.8) +
+  stat_qq_line( linetype = "dashed") +
+  labs(x = "Cuantiles teóricos", y = "Cuantiles de los residuos cuantil") +
+  theme_minimal()
 # gridExtra::grid.arrange(G1, G2, ncol = 2)
 ```
 
-En dicho gráfico se observa que los puntos siguen aproximadamente la línea de referencia, con ligeras desviaciones en los extremos.  
-Por lo tanto, puede concluirse que no existen desviaciones importantes respecto a la distribución esperada, indicando un ajuste razonablemente bueno del modelo.
+En dicho gráfico se observa que los puntos se alinean de manera adecuada a lo largo de la línea de referencia, con leves dispersiones concentradas en los extremos. Por lo tanto, no se evidencian desvíos sistemáticos importantes respecto a la distribución teórica esperada, lo que sugiere un ajuste globalmente satisfactorio del modelo.
  
  
 ## Estudio de la capacidad predictiva del modelo 
 
 La capacidad predictiva del modelo se evaluó sobre el conjunto de validación, es decir, sobre pasajeros que no participaron en la estimación de los parámetros, de modo de obtener una medida de desempeño que no esté sesgada por el ajuste. Con las probabilidades de supervivencia estimadas para esas observaciones, se construyó la curva ROC, que muestra cómo varían la sensibilidad (tasa de verdaderos positivos) y la tasa de falsos positivos (1 - especificidad) al modificar el punto de corte de clasificación. Esta curva permite analizar el equilibrio entre ambos tipos de acierto y error, y es una herramienta útil para elegir un umbral de clasificación adecuado. Complementariamente, se calculó el área bajo la curva (AUC) como resumen de la capacidad discriminante del modelo. 
 
-```{r, fig.cap='Curva ROC'}
+```{r}
+#| fig.cap = "Curva ROC"
+set.seed(147)
 # Probabilidades predichas (probabilidad de Survived = 1)
-train$prob <- predict(m_cloglog, newdata = train, type = "response")
+train$prob_pred <- predict(modelo_final, newdata = train, type = "response")
 
 curvaROC <- roc(
   response  = train$Survived,
-  predictor = train$prob,
+  predictor = train$prob_pred,
   quiet     = TRUE
 )
 
-plot(curvaROC, print.auc = TRUE, col = "aquamarine3", lwd = 2)
+# plot(curvaROC, print.auc = TRUE, col = "cadetblue4", lwd = 2)
+# print(auc(curva_roc))
+# 3. Gráfico con ggplot (usando ggroc)
+ggroc(curvaROC, legacy.axes = TRUE, colour = "cadetblue4", size = 1.2) +
+  #geom_abline(intercept = 1, slope = 1, linetype = "dashed", color = "grey50") +
+  annotate(
+    "text", 
+    x = 0.25, y = 0.5,  # Coordenadas (x, y) dentro del área inferior derecha
+    label = paste0("AUC = ", round(auc(curvaROC), 3)),
+    size = 4.5, 
+    fontface = "bold", 
+    color = "cadetblue4"
+  ) +
+  labs(
+    #title = "Curva ROC",
+    x = "1 - Especificidad",
+    y = "Sensibilidad"
+  ) +
+  theme_minimal()
 
-# Punto de corte óptimo (Youden)
-pc <- coords(curvaROC, "best", ret = "threshold", best.method = "youden") %>%
-  as.numeric()
-pc
+# Punto de corte óptimo (Youden) guardado como best_cut para que coincida abajo
+best_cut <- coords(curvaROC, "best", ret = "threshold", best.method = "youden")
+umbral <- as.numeric(best_cut[1, 1])
+umbral
 ```
  
 El punto de corte seleccionado fue de 0.842, correspondiente al valor que maximiza simultáneamente la sensibilidad y la especificidad del modelo. Con este umbral se obtuvo la siguiente matriz de confusión, que resume el desempeño del modelo en la clasificación de los casos: 
 
 | **Predicho / Observado** | **No Sobrevivió**| **Sobrevivió** |
 | ------------------------ | :---------------:| :------------: |
-| **No Sobrevivió**        |        65        |       12       |
-| **Sobrevivió**           |        19        |      45        |
+| **No Sobrevivió**        |        69        |       13       |
+| **Sobrevivió**           |        15        |       44       |
 
-El modelo logró clasificar correctamente al 78% de las observaciones del conjunto de validación, con una sensibilidad del 79% (proporción de sobrevivientes correctamente identificados) y una especificidad del 77.4% (proporción de no sobrevivientes correctamente clasificados). 
+El modelo logró clasificar correctamente al 80% de las observaciones del conjunto de validación, con una sensibilidad del 77% (proporción de sobrevivientes correctamente identificados) y una especificidad del 82.1% (proporción de no sobrevivientes correctamente clasificados). 
 
 ```{r}
 #| include: false
-test$prob <- predict(m_cloglog, newdata = test, type = "response")
-test$pred <- ifelse(test$prob > best_cut[1,1], "SI", "NO")
+test$prob <- predict(modelo_final, newdata = test, type = "response")
+test$pred <- ifelse(test$prob > umbral, "SI", "NO")
 
 confusionMatrix(
   factor(test$pred, levels = c("NO", "SI")),
@@ -700,7 +871,9 @@ confusionMatrix(
 En esta sección se presentan los principales hallazgos obtenidos a partir del modelo final ajustado. En primer lugar, se exponen las razones de odds estimadas para cada variable significativa, seguidas por la representación gráfica de las mismas. Posteriormente, se incluyen las curvas ajustadas que ilustran la probabilidad predicha de diabetes bajo diferentes combinaciones de factores.
 
 
- 
+ ## Razones de odds
+
+Las razones de odds permiten cuantificar la variación en la probabilidad de padecer diabetes ante cambios en las variables explicativas, manteniendo constantes las demás condiciones.
  
  
  
@@ -714,50 +887,50 @@ En esta sección se presentan los principales hallazgos obtenidos a partir del m
  
 
 ```{r}
-
-# ===== Razones de odds con IC (Wald 95%) =====
-exp(cbind(OR = coef(modelo_final), confint.default(modelo_final)))
-
-# ===== ROC y punto de corte de Youden =====
-Curva.ROC <- roc(muestra$Survived, fitted(modelo_final))
-auc(Curva.ROC)
-coords(Curva.ROC, "best", best.method = "youden",
-       ret = c("threshold", "sensitivity", "specificity"))
+# 
+# # ===== Razones de odds con IC (Wald 95%) =====
+# exp(cbind(OR = coef(modelo_final), confint.default(modelo_final)))
+# 
+# # ===== ROC y punto de corte de Youden =====
+# Curva.ROC <- roc(muestra$Survived, fitted(modelo_final))
+# auc(Curva.ROC)
+# coords(Curva.ROC, "best", best.method = "youden",
+#        ret = c("threshold", "sensitivity", "specificity"))
 ```
 
 ```{r}
-train$SurvNum <- as.numeric(train$Survived == "SI")
-
-modelos <- list(Logit   = modelo_final,
-                Probit  = m_probit,
-                Cloglog = m_cloglog)
-
-# Curvas: cada modelo con su propio eta, ordenado
-curvas <- bind_rows(lapply(names(modelos), function(nm) {
-  data.frame(Modelo = nm,
-             eta = predict(modelos[[nm]]),
-             p   = fitted(modelos[[nm]]))
-})) %>%
-  arrange(Modelo, eta)
-
-# Proporciones observadas por deciles del eta de cada modelo
-obs <- bind_rows(lapply(names(modelos), function(nm) {
-  data.frame(Modelo = nm,
-             eta = predict(modelos[[nm]]),
-             y = train$SurvNum) %>%
-    mutate(grupo = cut(eta,
-                       breaks = unique(quantile(eta, seq(0, 1, 0.1))),
-                       include.lowest = TRUE)) %>%
-    group_by(Modelo, grupo) %>%
-    summarise(eta = mean(eta), prop = mean(y), n = n(), .groups = "drop")
-}))
-
-ggplot() +
-  geom_line(data = curvas, aes(eta, p), linewidth = 1, color = "steelblue") +
-  geom_point(data = obs, aes(eta, prop, size = n), fill = "orange", shape = 21) +
-  facet_wrap(~ Modelo, scales = "free_x") +
-  labs(x = expression(hat(eta)~"(predictor lineal de cada modelo)"),
-       y = "Proporción de supervivencia", size = "Pasajeros") +
-  theme_minimal()
+# train$SurvNum <- as.numeric(train$Survived == "SI")
+# 
+# modelos <- list(Logit   = modelo_final,
+#                 Probit  = m_probit,
+#                 Cloglog = m_cloglog)
+# 
+# # Curvas: cada modelo con su propio eta, ordenado
+# curvas <- bind_rows(lapply(names(modelos), function(nm) {
+#   data.frame(Modelo = nm,
+#              eta = predict(modelos[[nm]]),
+#              p   = fitted(modelos[[nm]]))
+# })) %>%
+#   arrange(Modelo, eta)
+# 
+# # Proporciones observadas por deciles del eta de cada modelo
+# obs <- bind_rows(lapply(names(modelos), function(nm) {
+#   data.frame(Modelo = nm,
+#              eta = predict(modelos[[nm]]),
+#              y = train$SurvNum) %>%
+#     mutate(grupo = cut(eta,
+#                        breaks = unique(quantile(eta, seq(0, 1, 0.1))),
+#                        include.lowest = TRUE)) %>%
+#     group_by(Modelo, grupo) %>%
+#     summarise(eta = mean(eta), prop = mean(y), n = n(), .groups = "drop")
+# }))
+# 
+# ggplot() +
+#   geom_line(data = curvas, aes(eta, p), linewidth = 1, color = "steelblue") +
+#   geom_point(data = obs, aes(eta, prop, size = n), fill = "orange", shape = 21) +
+#   facet_wrap(~ Modelo, scales = "free_x") +
+#   labs(x = expression(hat(eta)~"(predictor lineal de cada modelo)"),
+#        y = "Proporción de supervivencia", size = "Pasajeros") +
+#   theme_minimal()
 ```
 
