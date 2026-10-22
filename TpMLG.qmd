@@ -1,19 +1,102 @@
 ---
-title: "TPMLG"
-format: pdf
-editor: visual
+format:
+  pdf:
+    pdf-engine: xelatex
+    keep-tex: true
+    toc: false
+    fig-cap: true
+    geometry:
+      - left=3cm
+      - right=3cm
+      - top=3cm
+      - bottom=3cm
+fontsize: 11pt
+lang: es-ES
+
+execute:
+  echo: false
+  warning: false
+  message: false
+
+header-includes:
+  - \usepackage{caption}
+  - \captionsetup[table]{position=bottom,labelformat=default,labelsep=colon,name=Tabla}
+  - \captionsetup[figure]{labelformat=default,labelsep=colon,name=Figura}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+
+editor:
+  render-on-save: false
 ---
 
-```{r}
-library(titanic)
-library(dplyr)
-library(ggplot2)
-library(glmtoolbox); library(statmod); library(pROC); library(tidyr)
-library(caret)
-library(kableExtra)
-```
+\begin{titlepage}
+    \centering
+    % Logo
+    \includegraphics[width=0.7\textwidth]{logo_facultad.png}\par
+    % Espacio entre logo y título principal
+    \vspace{3cm}
+    % Título principal
+    {\scshape\Huge Trabajo Práctico de Modelos Lineales Generalizados \par}
+    \vfill
+    % Carrera y Alumnos
+    {\Large Integrantes: \\[0.15cm]
+     Cañizares María Inés \\[0.15cm]
+     Zame, Lisbeth \par}
+    \vspace{1cm}
+    {\Large Licenciatura en Estadística \par}
+    % Fecha abajo del todo
+    \vspace{0.15cm}
+    {\large Año 2026 \par}
+\end{titlepage}
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.align="center", echo = FALSE, 
+                      warning = FALSE, message = FALSE, 
+                      fig.width = 5.5, fig.height = 2.8,  
+                      fig.align = "center", dpi = 300)
+``` 
+
 
 ```{r}
+# Carga de librerías
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggpubr)
+library(forcats)
+library(MASS)
+library(statmod)
+library(kableExtra)
+library(pROC)
+library(caret)
+library(broom) # Extrae info de los modelos ajustados
+
+
+# Estilo global de gráficos ggplot2
+theme_set(
+  theme_bw(base_size = 11) +
+    theme(
+      plot.title = element_blank(),           # sin título principal
+      plot.subtitle = element_blank(),        # sin subtítulo
+      plot.caption = element_blank(),         # caption lo maneja knitr
+      axis.title = element_text(size = 10, face = "bold"),
+      axis.text = element_text(size = 9),
+      legend.title = element_text(size = 10, face = "bold"),
+      legend.text = element_text(size = 9),
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(linewidth = 0.3, colour = "grey85"),
+      strip.text = element_text(size = 10)    # para facet_wrap/facet_grid
+    )
+)
+
+options(scipen = 8) # Desactiva notación científica
+```
+
+
+```{r}
+# Carga de datos y particion de la base (entrenamiento y prueba)
 datos <- titanic_train %>% select(-Name, -SibSp, -Parch, -Ticket, -Cabin, -Pclass)
 set.seed(147)
 datos <- datos %>%
@@ -29,6 +112,33 @@ test  <- slice(datos, -filas)
 
 ```
 
+# Introducción 
+
+# Material y métodos  
+
+
+
+
+Las variables explicativas incluidas en el análisis se describen a continuación: 
+
+\begin{itemize}
+  \item \textbf{Edad}: medida en años. Es una variable cuantitativa continua.
+
+ \item \textbf{Tarifa}: precio del pasaje abonado por el pasajero, medida en libras esterlinas (£). Es una variable cuantitativa continua.
+ 
+ \item \textbf{Embarcación}: puerto en el que el pasajero abordó el Titanic, categorizada en tres niveles:
+  \begin{itemize}
+    \item ``C'': Cherburgo (Francia)
+    \item ``Q'': Queenstown (Irlanda, actual Cobh)
+    \item ``S'': Southampton (Inglaterra)
+  \end{itemize}
+
+  \item \textbf{Sexo}: sexo del pasajero. Fue categorizada en dos niveles:
+  \begin{itemize}
+    \item “Male”: Masculino
+    \item “female”: Femenino
+  \end{itemize}
+\end{itemize}
 # Análisis Descriptivo
 
 A continuación se presenta una visión general de las características clave de la población estudiada.
@@ -203,97 +313,130 @@ tabla_tarifa %>%
   )
 ```
 
+# FALTAN CONCLUSIONES DE TABLAS DESPUES DE REPRODUCIR  
+
+```{r fig 1}
+ggplot(datos, aes(x = Sex, fill = factor(Survived))) +
+  geom_bar(position = "fill", width = 0.7) +
+  scale_fill_manual(
+    values = c("cadetblue4", "pink3"),
+    name = "Supervivencia",
+    labels = c("No sobrevivió", "Sobrevivió")
+  ) +
+  scale_x_discrete(
+    labels = c("female" = "Femenino", "male" = "Masculino")
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Sexo",
+    y = "Proporción"
+  )
+```
+
+Se observa que la proporción de pasajeros que sobrevivieron es más alta para aquellos con sexo femenino en comparacón a los pasajeros  masculinos. 
+
+```{r fig 2}
+ggplot(datos, aes(x = Embarked, fill = factor(Survived))) +
+  geom_bar(position = "fill", width = 0.7) +
+  scale_fill_manual(
+    values = c("cadetblue4", "pink3"),
+    name = "Supervivencia",
+    labels = c("No sobrevivió", "Sobrevivió")
+  ) +
+  scale_x_discrete(
+    labels = c("C" = "C", "Q" = "Q", "S" = "S")
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Embarcación",
+    y = "Proporción"
+  )
+```
+
+Se observa una mayor proporción de sobrevivientes entre los pasajeros que embarcaron en C (aprox. 60%) en comparación con Q y S (aprox. 28% y 36%), lo que sugiere una posible asociación entre el puerto de embarque y la supervivencia. 
+
 Graficos de la variable edad 
 ```{r}
-library(ggpubr)
+
 p1 <- ggplot(data = datos, aes(x = Age, fill = Survived)) +
       geom_density(alpha = 0.5) +
-      scale_fill_manual(values = c("gray50", "orangered2")) +
+      scale_fill_manual(
+        values = c("cadetblue4", "pink3"),
+        name = "Supervivencia",
+        labels = c("No sobrevivió", "Sobrevivió")
+      ) +
       geom_rug(aes(color = Survived), alpha = 0.5) +
-      scale_color_manual(values = c("gray50", "orangered2")) +
+      scale_color_manual(
+        values = c("cadetblue4", "pink3"),
+        name = "Supervivencia",
+        labels = c("No sobrevivió", "Sobrevivió")
+      ) +
+      labs(x = "Edad", y = "Densidad") +
       theme_bw()
+
 p2 <- ggplot(data = datos, aes(x = Survived, y = Age, color = Survived)) +
       geom_boxplot(outlier.shape = NA) +
       geom_jitter(alpha = 0.3, width = 0.15) +
-      scale_color_manual(values = c("gray50", "orangered2")) +
+      scale_color_manual(
+        values = c("cadetblue4", "pink3"),
+        name = "Supervivencia",
+        labels = etiquetas
+      ) +
+      scale_x_discrete(labels = etiquetas) +
+      labs(x = "Supervivencia", y = "Edad") +
       theme_bw()
-final_plot <- ggarrange(p1, p2, legend = "top")
-final_plot <- annotate_figure(final_plot, top = text_grob("Age", size = 15))
+
+final_plot <- ggarrange(p1, p2, legend = "top", common.legend = TRUE)
+final_plot <- annotate_figure(final_plot, top = text_grob("Edad", size = 15))
 final_plot
 ```
+La distribución de la edad es similar entre sobrevivientes y no sobrevivientes, con medianas casi idénticas (aprox. 28 años), por lo que la edad parece no estar fuertemente asociada a la supervivencia. Se observa, sin embargo, una mayor proporción de sobrevivientes entre los niños pequeños, y una leve mayor presencia de no sobrevivientes en edades avanzadas. 
+
 
 GRaficos de la variable Tarifa 
 
 ```{r}
-library(ggpubr)
-p1 <- ggplot(data = datos, aes(x = Fare, fill = Survived)) +
+
+p1 <- ggplot(data = datos, aes(x = logFare, fill = Survived)) +
       geom_density(alpha = 0.5) +
-      scale_fill_manual(values = c("gray50", "orangered2")) +
+      scale_fill_manual(
+        values = c("cadetblue4", "pink3"),
+        name = "Supervivencia",
+        labels = c("No sobrevivió", "Sobrevivió")
+      ) +
       geom_rug(aes(color = Survived), alpha = 0.5) +
-      scale_color_manual(values = c("gray50", "orangered2")) +
+      scale_color_manual(
+        values = c("cadetblue4", "pink3"),
+        name = "Supervivencia",
+        labels = c("No sobrevivió", "Sobrevivió")
+      ) +
+      labs(x = "log(Tarifa + 1)", y = "Densidad") +
       theme_bw()
-p2 <- ggplot(data = datos, aes(x = Survived, y = Fare, color = Survived)) +
+
+p2 <- ggplot(data = datos, aes(x = Survived, y = logFare, color = Survived)) +
       geom_boxplot(outlier.shape = NA) +
       geom_jitter(alpha = 0.3, width = 0.15) +
-      scale_color_manual(values = c("gray50", "orangered2")) +
+      scale_color_manual(
+        values = c("cadetblue4", "pink3"),
+        name = "Supervivencia",
+        labels = c("No sobrevivió", "Sobrevivió")
+      ) +
+      scale_x_discrete(labels = c("No sobrevivió", "Sobrevivió")) +
+      labs(x = "Supervivencia", y = "log(Tarifa + 1)") +
       theme_bw()
-final_plot <- ggarrange(p1, p2, legend = "top")
-final_plot <- annotate_figure(final_plot, top = text_grob("Fare", size = 15))
+
+final_plot <- ggarrange(p1, p2, legend = "top", common.legend = TRUE)
+final_plot <- annotate_figure(final_plot, top = text_grob("log(Tarifa + 1)", size = 15))
 final_plot
 ```
 
-Graficos de la variable log(Fare)
-
-```{r}
-p1 <- ggplot(data = datos, aes(x = log(Fare), fill = Survived)) +
-      geom_density(alpha = 0.5) +
-      scale_fill_manual(values = c("gray50", "orangered2")) +
-      geom_rug(aes(color = Survived), alpha = 0.5) +
-      scale_color_manual(values = c("gray50", "orangered2")) +
-      theme_bw()
-p2 <- ggplot(data = datos, aes(x = Survived, y = log(Fare), color = Survived)) +
-      geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha = 0.3, width = 0.15) +
-      scale_color_manual(values = c("gray50", "orangered2")) +
-      theme_bw()
-final_plot <- ggarrange(p1, p2, legend = "top")
-final_plot <- annotate_figure(final_plot, top = text_grob("Log(Fare)", size =15))
-final_plot
-```
+La tarifa pagada parece estar asociada a la supervivencia: los pasajeros que sobrevivieron presentan en general tarifas más altas (mediana de log(Tarifa + 1) mayor) que quienes no sobrevivieron, que se concentran en tarifas bajas. Esto sugiere que la tarifa podría ser un predictor relevante de la supervivencia. 
 
 
+# Modelado estadístico
 
-
-
-Grafico de la variable respuesta
-
-```{r}
-ggplot(datos, aes(x = Survived)) +
-  geom_bar() +
-  labs(x = "Sobrevivió", y = "Cantidad")
-```
-
-```{r}
-ggplot(datos, aes(x = Sex, fill = as.factor(Survived))) +
-  geom_bar(position = "fill") +
-  labs(y = "Proporción")
-
-ggplot(datos, aes(x = factor(Embarked), fill = as.factor(Survived))) +
-  geom_bar(position = "fill") +
-  labs(x = "Embarque", y = "Proporción")
-
-ggplot(datos, aes(x = Age, y = Survived, color = Survived)) +
-  geom_jitter(height = 0.2, alpha = 0.6) +
-  labs(x = "Edad", y = "Sobrevivió", color = "Sobrevivió")
-
-
-ggplot(datos, aes(x = Survived, y = log(Fare + 1), fill = Survived)) +
-  geom_boxplot() +
-  labs(x = "Sobrevivió", y = "log(Fare + 1)") +
-  guides(fill = "none")
-```
-
-# Selección de variables
+El trabajo se realizará bajo el enfoque de modelos lineales generalizados, utilizando lo desarrollado por Nelder y Wedderburn. 
+## Selección del modelo
 
 ```{r, echo = FALSE}
 # Preparacion
