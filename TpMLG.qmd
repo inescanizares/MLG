@@ -60,13 +60,14 @@ knitr::opts_chunk$set(fig.align="center", echo = FALSE,
 
 ```{r}
 # Carga de librerías
+library(titanic)
 library(readr)
-library(dplyr)
+library(MASS)
 library(tidyr)
 library(ggplot2)
 library(ggpubr)
 library(forcats)
-library(MASS)
+library(dplyr)
 library(statmod)
 library(kableExtra)
 library(pROC)
@@ -116,11 +117,17 @@ test  <- slice(datos, -filas)
 
 El hundimiento del RMS Titanic, ocurrido en 1912 durante su viaje inaugural, es una de las tragedias marítimas más recordadas de la historia. Considerado el mayor transatlántico de su época y casi insumergible, su naufragio causó la muerte de más de 1.500 de las aproximadamente 2.200 personas a bordo y dejó en evidencia graves falencias de seguridad, como la escasez de botes salvavidas. El suceso provocó una conmoción mundial e impulsó cambios en la normativa internacional. Los datos de sus pasajeros permiten, además, estudiar si la supervivencia estuvo asociada a características individuales como el sexo, la edad, la tarifa abonada o el puerto de embarque, y contrastar con evidencia empírica la norma de “mujeres y niños primero”.
 
-En este trabajo se busca identificar los factores con mayor influencia en la probabilidad de supervivencia de los pasajeros, mediante un Modelo Lineal Generalizado con distribución binomial y función de enlace logit sobre la base de datos del Titanic construida a partir de registros históricos reales.
+En este trabajo se busca identificar los factores con mayor influencia en la probabilidad de supervivencia de los pasajeros, mediante un Modelo Lineal Generalizado sobre la base de datos del Titanic construida a partir de registros históricos reales.
 
 # Material y métodos  
 
+En este contexto, el presente trabajo tiene como objetivo modelar la probabilidad de supervivencia de los pasajeros del Titanic en función de sus características individuales, mediante un Modelo Lineal Generalizado con función de enlace logit. Este enfoque, permite estimar el efecto de cada variable en términos de razones de odds y evaluar posibles interacciones entre ellas.
 
+La base de datos utilizada contiene información de 891 pasajeros. Dado que presentaba datos faltantes, se optó por eliminar las observaciones incompletas, por lo que el análisis se realizó sobre 712 observaciones. Para evaluar la capacidad predictiva del modelo, esta base se dividió en dos subconjuntos: uno de entrenamiento, con 571 observaciones, utilizado para ajustar el modelo, y uno de prueba, con las 141 restantes, reservado para evaluar su desempeño predictivo sobre datos no utilizados en el ajuste.
+
+La variable respuesta es Survived, que indica si el pasajero sobrevivió al naufragio: toma el valor 1 si sobrevivió (SÍ) y 0 si no sobrevivió (NO). Al tratarse de una variable binaria, se asume que cada observación sigue una distribución Bernoulli.
+
+El análisis comenzó con un estudio descriptivo de las variables, para explorar su distribución y su relación con la supervivencia. Luego se seleccionaron las variables del modelo sobre el conjunto de entrenamiento y se ajustó el modelo final con enlace logit. Se evaluó su ajuste y su capacidad predictiva sobre el conjunto de prueba. Por último, se compararon distintas funciones de enlace (logit, probit y cloglog), con el fin de identificar qué factores estuvieron más fuertemente asociados a la supervivencia.
 
 
 Las variables explicativas incluidas en el análisis se describen a continuación: 
