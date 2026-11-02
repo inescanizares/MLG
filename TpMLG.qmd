@@ -346,7 +346,7 @@ ggplot(datos, aes(x = Sex, fill = factor(Survived))) +
   )
 ```
 
-Se observa que la proporción de pasajeros que sobrevivieron es más alta para aquellos con sexo femenino en comparacón a los pasajeros  masculinos. 
+En la Figura 1, se observa que la proporción de pasajeros que sobrevivieron es más alta para aquellos con sexo femenino en comparacón a los pasajeros  masculinos. 
 
 ```{r fig-2}
 #| fig.cap: "Proporción de pasajeros sobrevivientes según lugar de embarcación"
@@ -367,7 +367,7 @@ ggplot(datos, aes(x = Embarked, fill = factor(Survived))) +
   )
 ```
 
-Se observa una mayor proporción de sobrevivientes entre los pasajeros que embarcaron en C (aprox. 60%) en comparación con Q y S (aprox. 28% y 36%), lo que sugiere una posible asociación entre el puerto de embarque y la supervivencia. 
+En la Figura 2, se observa una mayor proporción de sobrevivientes entre los pasajeros que embarcaron en C (aprox. 60%) en comparación con Q y S (aprox. 28% y 36%), lo que sugiere una posible asociación entre el puerto de embarque y la supervivencia. 
 
 ```{r fig-3}
 #| fig.cap: "Proporción de pasajeros sobrevivientes según clase"
@@ -387,7 +387,7 @@ ggplot(datos, aes(x = Pclass, fill = factor(Survived))) +
     y = "Proporción"
   )
 ```
-*FALTA CONCLUIR*
+En la Figura 3, se observa que, en primera clase sobrevivió aproximadamente el 65 % de los pasajeros, en segunda clase cerca del 48 % y en tercera clase solo alrededor del 24 %. Es decir, la supervivencia fue mayor en la clase más alta y menor en la más baja. Esto sugiere una asociación entre la clase y la supervivencia, por lo que esta variable resulta relevante para incluir en el análisis.
 
 ```{r, fig-4}
 #| fig.cap: "Distribución de la edad según supervivencia"
