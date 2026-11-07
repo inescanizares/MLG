@@ -74,6 +74,7 @@ library(pROC)
 library(caret)
 library(broom) # Extrae info de los modelos ajustados
 library(glmtoolbox)
+library(knitr)
 
 # Estilo global de gráficos ggplot2
 theme_set(
@@ -101,6 +102,10 @@ options(scipen = 8) # Desactiva notación científica
 datos <- titanic_train %>% select(-Name, -SibSp, -Parch, -Ticket, -Fare,-Cabin)
 datos <- datos %>%
   filter(!is.na(Age), Embarked != "")
+
+datos$Sex      <- factor(datos$Sex)
+datos$Embarked <- factor(datos$Embarked)
+datos$Pclass   <- factor(datos$Pclass, levels = c(1, 2, 3))
 
 datos$Survived <- factor(datos$Survived, levels = c(0, 1), labels = c("NO", "SI"))
 set.seed(147)
@@ -159,9 +164,9 @@ Las variables explicativas incluidas en el análisis se describen a continuació
 
 # Análisis Descriptivo
 
-A continuación se presenta una visión general de las características clave de la población estudiada.
+A continuación se realiza una descripción general de las características clave de la población estudiada.
 
-```{r}
+```{r, results='hide'}
 tabla_supervivencia <- datos %>%
   count(Survived) %>%
   mutate(
@@ -192,7 +197,7 @@ tabla_supervivencia %>%
 ```
 
 
-```{r}
+```{r, results='hide'}
 # Analisis variables explicativas categoricas
 
 # Frecuencias absolutas y relativas de SEXO
@@ -223,9 +228,8 @@ tabla_sexo %>%
     full_width = FALSE
   )
 ```
-\newpage
 
-```{r}
+```{r, results='hide'}
 # Frecuencias absolutas y relativas de EMBARKED
 tabla_embarked <- datos %>%
   count(Embarked) %>%
@@ -256,7 +260,7 @@ tabla_embarked %>%
   )
 ```
 
-```{r}
+```{r, results='hide'}
 # Frecuencias absolutas y relativas de PClass
 tabla_pclass <- datos %>%
   count(Pclass) %>%
@@ -287,7 +291,7 @@ tabla_pclass %>%
   )
 ```
 
-```{r}
+```{r , results='hide'}
 # Tabla descriptiva de edad
 tabla_edad <- datos %>%
   summarise(
@@ -324,7 +328,7 @@ tabla_edad %>%
 ```
 
 
-En conjunto, en las tablas descriptivas se observa que de los 712  pasajeros considerados, 424 (59,55 %) no sobrevivieron y 288 (40,45 %) sí lo hicieron, una distribución con casos suficientes en ambas categorías para estudiar los factores asociados a la supervivencia. La mayoría de los pasajeros eran hombres (63,62 %) y la mayor cantidad de pasajeros embarcaron en Southampton (77,81 %), mientras que la categoría Queenstown quedó representada por solo 28 observaciones (3,93 %), lo que podría dar estimaciones menos precisas para ese puerto. La edad presentó una distribución aproximadamente simétrica, con media de 29,64 años y mediana de 28, y una dispersión considerable (desvío estándar de 14,49 años).*La tarifa, en cambio, mostró una fuerte asimetría a la derecha, con una media (34,57) más del doble que la mediana (15,65) y valores extremos de hasta 512,33, por lo que se justifica transformarla con logaritmo antes de incluirla en el modelo.* En síntesis, la muestra es adecuada para el análisis, y las características observadas, como la composición por sexo, la edad y la tarifa, son variables de interés para evaluar su asociación con la supervivencia.  
+En principio, se observa que de los 712  pasajeros considerados, 424 (59,55 %) no sobrevivieron y 288 (40,45 %) sí lo hicieron, una distribución con casos suficientes en ambas categorías para estudiar los factores asociados a la supervivencia. La mayoría de los pasajeros eran hombres (63,62 %) y la mayor cantidad de pasajeros embarcaron en Southampton (77,81 %), mientras que la categoría Queenstown quedó representada por solo 28 observaciones (3,93 %), lo que podría dar estimaciones menos precisas para ese puerto. La edad presentó una distribución aproximadamente simétrica, con media de 29,64 años y mediana de 28, y una dispersión considerable (desvío estándar de 14,49 años).La clase del pasajero mostró que casi la mitad de los pasajeros viajaba en tercera clase (355 pasajeros, 49,86 %), mientras que primera y segunda clase tuvieron una participación similar y menor (184 pasajeros, 25,84 %, y 173 pasajeros, 24,30 %, respectivamente). En síntesis, la muestra es adecuada para el análisis, y las características observadas, como la composición por sexo, la edad y la clase, son variables de interés para evaluar su asociación con la supervivencia.  
 
 
 ```{r fig-1}
@@ -346,7 +350,7 @@ ggplot(datos, aes(x = Sex, fill = factor(Survived))) +
   )
 ```
 
-En la Figura 1, se observa que la proporción de pasajeros que sobrevivieron es más alta para aquellos con sexo femenino en comparacón a los pasajeros  masculinos. 
+En la @fig-1, se observa que la proporción de pasajeros que sobrevivieron es más alta para aquellos con sexo femenino en comparacón a los pasajeros  masculinos. 
 
 ```{r fig-2}
 #| fig.cap: "Proporción de pasajeros sobrevivientes según lugar de embarcación"
@@ -367,11 +371,11 @@ ggplot(datos, aes(x = Embarked, fill = factor(Survived))) +
   )
 ```
 
-En la Figura 2, se observa una mayor proporción de sobrevivientes entre los pasajeros que embarcaron en C (aprox. 60%) en comparación con Q y S (aprox. 28% y 36%), lo que sugiere una posible asociación entre el puerto de embarque y la supervivencia. 
+En la @fig-2, se observa una mayor proporción de sobrevivientes entre los pasajeros que embarcaron en C (aprox. 60%) en comparación con Q y S (aprox. 28% y 36%), lo que sugiere una posible asociación entre el puerto de embarque y la supervivencia. 
 
 ```{r fig-3}
 #| fig.cap: "Proporción de pasajeros sobrevivientes según clase"
-ggplot(datos, aes(x = Pclass, fill = factor(Survived))) +
+ggplot(datos, aes(x = factor(Pclass), fill = factor(Survived))) +
   geom_bar(position = "fill", width = 0.7) +
   scale_fill_manual(
     values = c("cadetblue4", "pink3"),
@@ -379,7 +383,7 @@ ggplot(datos, aes(x = Pclass, fill = factor(Survived))) +
     labels = c("No sobrevivió", "Sobrevivió")
   ) +
   scale_x_discrete(
-    labels = c("1" = "1", "2" = "2", "3" = "3")
+    labels = c("1" = "Primera", "2" = "Segunda", "3" = "Tercera")
   ) +
   scale_y_continuous(labels = scales::percent) +
   labs(
@@ -387,7 +391,7 @@ ggplot(datos, aes(x = Pclass, fill = factor(Survived))) +
     y = "Proporción"
   )
 ```
-En la Figura 3, se observa que, en primera clase sobrevivió aproximadamente el 65 % de los pasajeros, en segunda clase cerca del 48 % y en tercera clase solo alrededor del 24 %. Es decir, la supervivencia fue mayor en la clase más alta y menor en la más baja. Esto sugiere una asociación entre la clase y la supervivencia, por lo que esta variable resulta relevante para incluir en el análisis.
+En la @fig-3, se observa que, en primera clase sobrevivió aproximadamente el 65 % de los pasajeros, en segunda clase cerca del 48 % y en tercera clase solo alrededor del 24 %. Es decir, la supervivencia fue mayor en la clase más alta y menor en la más baja. Esto sugiere una asociación entre la clase y la supervivencia, por lo que esta variable resulta relevante para incluir en el análisis.
 
 ```{r, fig-4}
 #| fig.cap: "Distribución de la edad según supervivencia"
@@ -434,15 +438,6 @@ El trabajo se realizará bajo el enfoque de modelos lineales generalizados, util
 
 ```{r, results='hide'}
 # Preparacion
-
-train$Sex      <- factor(train$Sex)
-train$Embarked <- factor(train$Embarked)
-train$Pclass <- factor(train$Pclass)
-# Categorías de referencia 
-#train$Sex      <- relevel(train$Sex, ref = "male")
-#train$Embarked <- relevel(train$Embarked, ref = "S")
-
-
 m_completo <- glm(Survived ~ Sex + Age + Pclass + Embarked + Sex:Age + Sex:Pclass +
                     Sex:Embarked + Age:Pclass + Age:Embarked + Pclass:Embarked,
                   family = binomial("logit"), data = train)
@@ -460,19 +455,14 @@ Para modelar la probabilidad de supervivencia de los pasajeros del Titanic, en f
 En primer lugar, se seleccionaron las variables explicativas consideradas relevantes para explicar la supervivencia de los pasajeros y se ajustó un modelo que incluyó sus efectos principales. A continuación, se evaluó la incorporación de interacciones de segundo orden entre dichas variables, utilizando los métodos de selección hacia adelante (forward) y hacia atrás (backward), con el criterio de información de Akaike (AIC) y la deviance de cada modelo. Ambos procedimientos condujeron al mismo modelo final, que incorpora las vaiables sexo, edad, clase y la interaccion entre sexo y clase.
 
 
-# Probamos linealidad de la predictoras continuas
+## Probamos linealidad de la predictora continua
 
 ```{r, results='hide'}
 # Age: cuartiles calculados en train
 cortes_age <- unique(quantile(train$Age, probs = seq(0, 1, 0.25)))
 train$AgeF <- cut(train$Age, breaks = cortes_age, include.lowest = TRUE)
 
-# # logFare: cuartiles calculados en train
-# cortes_fare <- unique(quantile(train$logFare, probs = seq(0, 1, 0.25)))
-# train$logFareF <- cut(train$logFare, breaks = cortes_fare, include.lowest = TRUE)
-
 table(train$AgeF)
-# table(train$logFareF)
 
 # linealidad de Age
 # Age continua (tu modelo final)
@@ -490,7 +480,7 @@ anova(m_age_cont, m_age_ambas, test = "Chisq")
 # Age: no hay evidencia suficiente para decir que no hay no linealidad (la vble queda como esta)
 ``` 
 
-Para evaluar si la relación entre la edad y el logit de la probabilidad de supervivencia podía considerarse lineal, se construyó una versión categorizada de la edad en cuatro tramos definidos por los cuartiles del conjunto de entrenamiento: [0.42, 20], (20, 28], (28, 38] y (38, 74]. Se comparó el modelo con la edad continua contra el modelo que incorpora además la edad categorizada mediante una prueba de razón de verosimilitud, de modo que el modelo lineal quedara anidado en el ampliado. Los resultados no proporcionaron evidencia suficiente para justificar la incorporación de la edad categorizada (p-valor = 0.137). Por lo tanto, se decidió mantener la edad como variable continua en el modelo final.
+Para evaluar si la relación entre la edad y el logit de la probabilidad de supervivencia podía considerarse lineal, se construyó una versión categorizada de la edad en cuatro tramos definidos por los cuartiles del conjunto de entrenamiento: $[0.42, 20], (20, 28], (28, 38]$ y $(38, 74]$. Se comparó el modelo con la edad continua contra el modelo que incorpora además la edad categorizada mediante una prueba de razón de verosimilitud, de modo que el modelo lineal quedara anidado en el ampliado. Los resultados no proporcionaron evidencia suficiente para justificar la incorporación de la edad categorizada (p-valor = 0.137). Por lo tanto, se decidió mantener la edad como variable continua en el modelo final.
 
 Por lo tanto, el modelo seleccionado se expresa como:
 
@@ -505,28 +495,14 @@ $$
 \beta_6\, (\text{Sexo}_i \times \text{Clase3}_i), \quad i=\overline{1,571}
 \end{aligned}
 $$
-\noindent
-donde:
-
-\begin{itemize}
-  \item $\text{Sexo}_i = 
-  \begin{cases}
-    1 & \text{si } \text{Masculino} \\
-    0 & \text{si } \text{Femenino} 
-  \end{cases}$
-  
-  \item $\text{Clase2}_i = 
-  \begin{cases}
-    1 & \text{si } \text{Clase = 2}  \\
-    0 & \text{si } \text{en otro caso} 
-  \end{cases}$  
-
-  \item $\text{Clase3}_i = 
-  \begin{cases}
-    1 & \text{si } \text{Clase = 3}  \\
-    0 & \text{si } \text{en otro caso} 
-  \end{cases}$
-\end{itemize}
+$$
+\begin{aligned}
+\text{Sexo}_i &= \begin{cases} 1 & \text{si Masculino} \\ 0 & \text{si Femenino} \end{cases} \\[4pt]
+\text{Clase2}_i &= \begin{cases} 1 & \text{si Clase = 2} \\ 0 & \text{en otro caso} \end{cases}
+\quad
+\text{Clase3}_i = \begin{cases} 1 & \text{si Clase = 3} \\ 0 & \text{en otro caso} \end{cases}
+\end{aligned}
+$$
 
 ```{r, results='hide'}
 # Modelo final
@@ -556,7 +532,7 @@ m_cloglog <- update(modelo_final, family = binomial("cloglog"))
 ```
 
 
-```{r, tab-enlace ,fig.cap= "Comparación de enlaces según AIC (mismo predictor lineal)"}
+```{r,results='hide',fig.cap= "Comparación de enlaces según AIC (mismo predictor lineal)"}
 tabla_enlace <- AIC(modelo_final, m_probit, m_cloglog) %>%
   mutate(
     Enlace = c("Logit", "Probit", "Cloglog"),
@@ -573,7 +549,7 @@ tabla_enlace %>%
   kable_styling(latex_options = "hold_position", full_width = FALSE)
 ```
 
-Se compararon las tres funciones de enlace (logit, probit y cloglog) ajustando cada una con el mismo predictor lineal. El menor valor del criterio de información de Akaike correspondió al enlace logit (@tab-enlace). Este resultado, junto con que el test de adecuación del enlace no rechazó el logit (p-valor = 0.14), respalda su elección. Además, el enlace logit permite interpretar los efectos en términos de razones de odds, por lo que se continúa el análisis con este modelo. 
+Se compararon las tres funciones de enlace (logit, probit y cloglog) ajustando cada una con el mismo predictor lineal. El menor valor del criterio de información de Akaike correspondió al enlace logit. Este resultado, junto con que el test de adecuación del enlace no rechazó el logit (p-valor = 0.14), respalda su elección. Además, el enlace logit permite interpretar los efectos en términos de razones de odds, por lo que se continúa el análisis con este modelo. 
 
 
 Además, para evaluar la bondad de ajuste del modelo, se aplicó la prueba de Hosmer y Lemeshow. Esta prueba compara las frecuencias observadas y esperadas del evento de interés en grupos formados a partir de los valores predichos por el modelo y dado el tamaño muestral disponible. 
@@ -581,53 +557,34 @@ Además, para evaluar la bondad de ajuste del modelo, se aplicó la prueba de Ho
 ```{r, results='hide'}
 # ===== Bondad de ajuste (Hosmer-Lemeshow) =====
 # H0) el modelo ajusta bien
-# y <- as.numeric(train$Survived == "SI")
-# hoslem.test(y, fitted(modelo_final), g = 8)
-# hoslem.test(y, fitted(modelo_final), g = 10)
-# hoslem.test(y, fitted(modelo_final), g = 12)
-```
-
-```{r }
-#| label: tbl-hl
-#| tbl-cap: "Prueba de Hosmer y Lemeshow según el número de grupos"
-#| tbl-cap-location: bottom
 y <- as.numeric(train$Survived == "SI")
 
-tabla_hl <- lapply(c(8, 10, 12), function(g) {
-  t <- ResourceSelection::hoslem.test(y, fitted(modelo_final), g = g)
-  data.frame(Grupos = g,
-             Estadístico = round(unname(t$statistic), 2),
-             gl = unname(t$parameter),
-             `p-valor` = round(t$p.value, 3),
-             check.names = FALSE)
-}) %>% bind_rows()
-
-tabla_hl %>%
-  kable(align = "c", format = "latex", booktabs = TRUE) %>%
-  kable_styling(latex_options = "hold_position", full_width = FALSE)
+ResourceSelection::hoslem.test(y, fitted(modelo_final), g = 12)
 ```
+La prueba de Hosmer-Lemeshow con 12 grupos (estadístico = 17,11; gl = 10; p = 0,072) no rechaza la hipótesis de buen ajuste. Cabe aclarar que el resultado es sensible al número de grupos: con 8 y 10 grupos el p-valor fue menor a 0,05. Por lo tanto, no hay evidencia concluyente de falta de ajuste, aunque podrían existir desvíos leves. 
 
-Considerando los resultados del estudio del modelo a través de los diferentes tests de hipótesis, el ajuste realizado es el siguiente: 
+
+Considerando los resultados del estudio del modelo a través de los diferentes tests de hipótesis, el modelo estimado es el siguiente: 
 
 $$
 \begin{aligned}
-\text{logit}(\pi_i) =  \ln\left(\frac{\pi_i}{1 - \pi_i}\right) = &
-\beta_0 + \beta_1\,\text{Sexo}_i +
-\beta_2\,\text{Clase2}_i +
-\beta_3\, \text{Clase3}_i+
-\beta_4\, \text{Edad}_i+ \\
-& + \beta_5\,(\text{Sexo}_i \times \text{Clase2}_i) + 
-\beta_6\, (\text{Sexo}_i \times \text{Clase3}_i), \quad i=\overline{1,571}
+\text{logit}(\hat\pi_i) =  \ln\left(\frac{\hat\pi_i}{1 - \hat\pi_i}\right) = &
+4.85  -3.45\,\text{Sexo}_i -
+1.21\,\text{Clase2}_i -
+4.14\, \text{Clase3}_i -
+0.045\, \text{Edad}_i - \\
+& - 0.90\,(\text{Sexo}_i \times \text{Clase2}_i) + 
+2.06\, (\text{Sexo}_i \times \text{Clase3}_i), \quad i=\overline{1,571}
 \end{aligned}
 $$
 
-## Análisis de residuos
+## Análisis de residuos  
 
 El análisis de residuos permite evaluar la adecuación del modelo ajustado, tanto en lo que respecta a la componente sistemática como a la aleatoria.
 
 Con el objetivo de analizar la estructura del modelo, se construyó el gráfico de los residuos cuantil frente a las probabilidades estimadas bajo el enlace logit.  
 
-```{r, fig.cap="Análisis de residuos"}
+```{r fig-residuos, fig.cap="Análisis de residuos"}
 rQ <- qresid(modelo_final)
 
 G1 <- ggplot(train, aes(x = fitted(modelo_final), y = rQ)) +
@@ -646,72 +603,67 @@ final_plot2 <- ggarrange(G1, G2, legend = "top", common.legend = TRUE)
 final_plot2
 ```
 
-En el gráfico de residuos cuantil contra las probabilidades estimadas se observa que los residuos se distribuyen aproximadamente alrededor de cero, sin un patrón sistemático definido. Aunque hay una mayor concentración de observaciones en las probabilidades estimadas más bajas, no se identifican tendencias claras que indiquen problemas importantes de ajuste, lo que sugiere que la función de enlace logit es adecuada.
-Además, para verificar la distribución supuesta de los errores, se empleó el gráfico probabilístico normal de los residuos cuantil, donde los puntos se alinean adecuadamente con la línea de referencia, con leves desviaciones en los extremos. En conjunto, no se evidencian desvíos sistemáticos importantes, por lo que el modelo presenta un ajuste globalmente satisfactorio.
+En el gráfico de residuos cuantil contra las probabilidades estimadas (@fig-residuos) se observa que los residuos se distribuyen aproximadamente alrededor de cero, sin un patrón sistemático definido. Aunque hay una mayor concentración de observaciones en las probabilidades estimadas más bajas, no se identifican tendencias claras que indiquen problemas importantes de ajuste, lo que sugiere que la función de enlace logit es adecuada.
+Además, para verificar la distribución supuesta de los errores, se empleó el gráfico probabilístico normal de los residuos cuantil (@fig-residuos), donde los puntos se alinean adecuadamente con la línea de referencia, con leves desviaciones en los extremos. En conjunto, no se evidencian desvíos sistemáticos importantes, por lo que el modelo presenta un ajuste globalmente satisfactorio.
 
 
 ## Estudio de la capacidad predictiva del modelo 
 
-La capacidad predictiva del modelo se evaluó sobre el conjunto de validación, es decir, sobre pasajeros que no participaron en la estimación de los parámetros, de modo de obtener una medida de desempeño que no esté sesgada por el ajuste. Con las probabilidades de supervivencia estimadas para esas observaciones, se construyó la curva ROC, que muestra cómo varían la sensibilidad (tasa de verdaderos positivos) y la tasa de falsos positivos (1 - especificidad) al modificar el punto de corte de clasificación. Esta curva permite analizar el equilibrio entre ambos tipos de acierto y error, y es una herramienta útil para elegir un umbral de clasificación adecuado. Complementariamente, se calculó el área bajo la curva (AUC) como resumen de la capacidad discriminante del modelo. 
-
-```{r, results='hide'}
-#| fig.cap = "Curva ROC"
-set.seed(147)
-# Probabilidades predichas (probabilidad de Survived = 1)
-train$prob_pred <- predict(modelo_final, newdata = train, type = "response")
-
-curvaROC <- roc(
-  response  = train$Survived,
-  predictor = train$prob_pred,
-  quiet     = TRUE
-)
-
-# plot(curvaROC, print.auc = TRUE, col = "cadetblue4", lwd = 2)
-# print(auc(curva_roc))
-# 3. Gráfico con ggplot (usando ggroc)
-ggroc(curvaROC, legacy.axes = TRUE, colour = "cadetblue4", size = 1.2) +
-  #geom_abline(intercept = 1, slope = 1, linetype = "dashed", color = "grey50") +
-  annotate(
-    "text", 
-    x = 0.25, y = 0.5,  # Coordenadas (x, y) dentro del área inferior derecha
-    label = paste0("AUC = ", round(auc(curvaROC), 3)),
-    size = 4.5, 
-    fontface = "bold", 
-    color = "cadetblue4"
-  ) +
-  labs(
-    #title = "Curva ROC",
-    x = "1 - Especificidad",
-    y = "Sensibilidad"
-  ) 
-
-# Punto de corte óptimo (Youden) guardado como best_cut para que coincida abajo
-best_cut <- coords(curvaROC, "best", ret = "threshold", best.method = "youden")
-umbral <- as.numeric(best_cut[1, 1])
-
-```
- 
-El punto de corte seleccionado fue de 0.842, correspondiente al valor que maximiza simultáneamente la sensibilidad y la especificidad del modelo. Con este umbral se obtuvo la siguiente matriz de confusión, que resume el desempeño del modelo en la clasificación de los casos: 
-
-| **Predicho / Observado** | **No Sobrevivió**| **Sobrevivió** |
-| ------------------------ | :---------------:| :------------: |
-| **No Sobrevivió**        |        69        |       13       |
-| **Sobrevivió**           |        15        |       44       |
-
-El modelo logró clasificar correctamente al 80% de las observaciones del conjunto de validación, con una sensibilidad del 77% (proporción de sobrevivientes correctamente identificados) y una especificidad del 82.1% (proporción de no sobrevivientes correctamente clasificados). 
-
+La capacidad predictiva del modelo se evaluó sobre el conjunto de validación, es decir, sobre pasajeros que no participaron en la estimación de los parámetros, de modo de obtener una medida de desempeño que no esté sesgada por el ajuste. 
 ```{r}
 #| include: false
+train$Pclass <- factor(train$Pclass, levels = c("1", "2", "3"))
+test$Pclass  <- factor(test$Pclass,  levels = c("1", "2", "3"))
+
+# Punto de corte (Youden) con los datos de entrenamiento
+train$prob <- predict(modelo_final, newdata = train, type = "response")
+roc_train  <- roc(train$Survived, train$prob, levels = c("NO", "SI"),
+                  direction = "<", quiet = TRUE)
+umbral <- as.numeric(coords(roc_train, "best", ret = "threshold",
+                            best.method = "youden")[1, 1])
+
+# Desempeño en el conjunto de validación
 test$prob <- predict(modelo_final, newdata = test, type = "response")
+roc_test  <- roc(test$Survived, test$prob, levels = c("NO", "SI"),
+                 direction = "<", quiet = TRUE)
 test$pred <- ifelse(test$prob > umbral, "SI", "NO")
 
-confusionMatrix(
-  factor(test$pred, levels = c("NO", "SI")),
-  factor(test$Survived, levels = c("NO", "SI")),
-  positive = "SI"
-)
+cm <- confusionMatrix(factor(test$pred, levels = c("NO", "SI")),
+                      factor(test$Survived, levels = c("NO", "SI")),
+                      positive = "SI")
+
+# Formato con coma decimal para el texto
+fmt <- function(x, d = 3) format(round(x, d), decimal.mark = ",", nsmall = d)
+pct <- function(x) paste0(format(round(100 * x, 1), decimal.mark = ","), "%")
 ```
- 
+
+```{r fig-ROC}
+#| fig.cap: "Curva ROC en el conjunto de validación"
+ggroc(roc_test, legacy.axes = TRUE, colour = "cadetblue4", linewidth = 1.2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey50") +
+  annotate("text", x = 0.65, y = 0.25,
+           label = paste0("AUC = ", round(auc(roc_test), 3)),
+           size = 4.5, fontface = "bold", color = "cadetblue4") +
+  labs(x = "1 - Especificidad", y = "Sensibilidad")
+```
+ Con las probabilidades de supervivencia estimadas para esas observaciones, se construyó la curva ROC (@fig-ROC), que muestra cómo varían la sensibilidad (tasa de verdaderos positivos) y la tasa de falsos positivos (1 - especificidad) al modificar el punto de corte de clasificación. Complementariamente, se calculó el área bajo la curva (AUC) como resumen de la capacidad discriminante del modelo, que fue de `r fmt(auc(roc_test))`.
+
+El punto de corte de clasificación se determinó con el conjunto de entrenamiento y resultó de `r fmt(umbral)`, valor que maximiza la suma de la sensibilidad y la especificidad (índice de Youden). Con este umbral aplicado al conjunto de validación se obtuvo la siguiente matriz de confusión: 
+
+```{r}
+tab_cm <- as.matrix(cm$table)
+rownames(tab_cm) <- c("Predicho: No sobrevivió", "Predicho: Sobrevivió")
+colnames(tab_cm) <- c("No sobrevivió", "Sobrevivió")
+
+tab_cm %>%
+  kable(caption = "Matriz de confusión en el conjunto de validación", align = "c") %>%
+  add_header_above(c(" " = 1, "Observado" = 2)) %>%
+  kable_styling(latex_options = "hold_position", full_width = FALSE)
+```
+
+El modelo logró clasificar correctamente al `r pct(cm$overall["Accuracy"])` de las observaciones del conjunto de validación, con una sensibilidad del `r pct(cm$byClass["Sensitivity"])` (proporción de sobrevivientes correctamente identificados) y una especificidad del `r pct(cm$byClass["Specificity"])` (proporción de no sobrevivientes correctamente clasificados).
+
+
 # Resultados  
 
 En esta sección se presentan los principales hallazgos obtenidos a partir del modelo final ajustado. En primer lugar, se exponen las razones de odds estimadas para cada variable significativa, seguidas por la representación gráfica de las mismas.
@@ -720,104 +672,93 @@ En esta sección se presentan los principales hallazgos obtenidos a partir del m
 
 Las razones de odds permiten cuantificar la variación en la probabilidad de sobrevivir ante cambios en las variables explicativas, manteniendo constantes las demás condiciones.
  
-```{r}
-set.seed(147)
+```{r tab-RO}
 b <- coef(modelo_final)
 V <- vcov(modelo_final)
 
-# Función: RO e IC 95% (Wald) para una combinación lineal L de coeficientes
+# RO e IC 95% (Wald) para una combinación lineal L de coeficientes
 RO_lin <- function(L, etiqueta) {
-  L <- L[names(b)]; L[is.na(L)] <- 0
-  est <- sum(L * b)
-  se  <- sqrt(as.numeric(t(L) %*% V %*% L))
+  faltan <- setdiff(names(L), names(b))
+  if (length(faltan) > 0)
+    stop("Coeficientes no encontrados: ", paste(faltan, collapse = ", "))
+  Lc <- setNames(rep(0, length(b)), names(b))
+  Lc[names(L)] <- L
+  est <- sum(Lc * b)
+  se  <- sqrt(as.numeric(t(Lc) %*% V %*% Lc))
   data.frame(Contraste = etiqueta,
              RO     = round(exp(est), 3),
              IC_inf = round(exp(est - 1.96 * se), 3),
              IC_sup = round(exp(est + 1.96 * se), 3))
 }
 
-# Valores de referencia
-edad_med    <- median(train$Age, na.rm = TRUE)    # para el efecto de logFare
-logfare_med <- median(train$logFare, na.rm = TRUE) # para el efecto de la edad
-inc_edad    <- 5
+tabla_RO <- bind_rows(
+  # Edad (X + 5 vs. X), sin interacción
+  RO_lin(c(Age = 5), "Edad (X + 5 vs. X)"),
 
-tabla <- bind_rows(
-  # Embarked (sin interacción)
-  RO_lin(c(EmbarkedQ = 1), "Embarque Q vs. C"),
-  RO_lin(c(EmbarkedS = 1), "Embarque S vs. C"),
+  # Sexo (masc. vs. fem.) en cada clase
+  RO_lin(c(Sexmale = 1),                        "Sexo (masc. vs. fem.) en 1ª clase"),
+  RO_lin(c(Sexmale = 1, "Sexmale:Pclass2" = 1), "Sexo (masc. vs. fem.) en 2ª clase"),
+  RO_lin(c(Sexmale = 1, "Sexmale:Pclass3" = 1), "Sexo (masc. vs. fem.) en 3ª clase"),
 
-  # Sexo (masculino vs. femenino) a distintas edades
-  lapply(edad_med, function(a)
-    RO_lin(c(Sexmale = 1, "Sexmale:Age" = a),
-           paste0("Sexo (masc. vs. fem.) a los ", a, " años"))) %>% bind_rows(),
+  # Clase vs. 1ª, en mujeres
+  RO_lin(c(Pclass2 = 1), "2ª vs. 1ª clase en mujeres"),
+  RO_lin(c(Pclass3 = 1), "3ª vs. 1ª clase en mujeres"),
 
-  # Edad (X + 5 vs. X) en mujeres y hombres, con logFare en su mediana
-  RO_lin(c(Age = inc_edad, "logFare:Age" = inc_edad * logfare_med),
-         paste0("Edad (X+", inc_edad, " vs. X) en mujeres, logFare = ",
-                round(logfare_med, 2))),
-  RO_lin(c(Age = inc_edad, "Sexmale:Age" = inc_edad,
-           "logFare:Age" = inc_edad * logfare_med),
-         paste0("Edad (X+", inc_edad, " vs. X) en hombres, logFare = ",
-                round(logfare_med, 2))),
-
-  # logFare (X + 1 vs. X) con la edad en su mediana
-  RO_lin(c(logFare = 1, "logFare:Age" = edad_med),
-         paste0("logFare (X+1 vs. X) a los ", round(edad_med, 1), " años"))
+  # Clase vs. 1ª, en hombres
+  RO_lin(c(Pclass2 = 1, "Sexmale:Pclass2" = 1), "2ª vs. 1ª clase en hombres"),
+  RO_lin(c(Pclass3 = 1, "Sexmale:Pclass3" = 1), "3ª vs. 1ª clase en hombres")
 )
 
-tabla %>%
+tabla_RO %>%
+  mutate(`IC 95%` = paste0("(", IC_inf, "; ", IC_sup, ")")) %>%
+  select(Contraste, RO, `IC 95%`) %>%
   kable(
-    caption  = "Razones de odds e intervalos de confianza del 0.95 (Wald)",
-    col.names = c("Contraste", "RO", "IC inferior", "IC superior"),
-    align     = c("l", "c", "c", "c"),
+    caption   = "Razones de odds e intervalos de confianza de nivel 0,95 (Wald)",
+    align     = c("l", "c", "c"),
     row.names = FALSE
   ) %>%
   kable_styling(latex_options = "hold_position", full_width = FALSE)
 
 ```
 
+```{r fig-forest, fig.cap='Forest plot de Razones de odds (cambios en edad por 5 años)'}
+df <- tabla_RO %>%
+  mutate(index = rev(seq_len(n())))   # el primer contraste queda arriba
 
-
-
-```{r, fig.cap='Forest plot de Razones de odds (cambios en edad por 5 años)'}
-res <- tabla %>%
-  mutate(
-    Contraste = fct_rev(fct_inorder(Contraste)),   # mantiene el orden de la tabla
-    signif = if_else(IC_inf > 1 | IC_sup < 1, "Significativa", "No significativa")
-  )
-
-ggplot(res, aes(x = RO, y = Contraste, color = signif)) +
-  geom_vline(xintercept = 1, linetype = "dashed", color = "grey40", linewidth = 0.8) +
-  geom_errorbar(aes(xmin = IC_inf, xmax = IC_sup),
-                orientation = "y", width = 0.2) +
-  geom_point(size = 2.5) +
-  geom_text(aes(label = sprintf("%.2f", RO)), vjust = -1, size = 3.3,
-            show.legend = FALSE) +
-  scale_color_manual(values = c("Significativa" = "cadetblue4",
-                                "No significativa" = "pink3"),
-                     name = NULL) +
-  scale_x_log10(breaks = c(0.05, 0.1, 0.25, 0.5, 1, 2, 4)) +
-  scale_y_discrete(labels = function(y) stringr::str_wrap(y, width = 28)) +
-  labs(
-    x = "Razón de odds (escala logarítmica)",
-    y = "Variable"
-  ) 
+ggplot(data = df, aes(y = index, x = RO, xmin = IC_inf, xmax = IC_sup)) +
+  geom_point(shape = 21, fill = "pink", color = "black", size = 1.8) +
+  geom_text(aes(label = round(RO, 2)), vjust = -1, size = 2) +
+  geom_errorbar(orientation = "y", width = .27) +
+  scale_y_continuous(name = "",
+                     breaks = df$index,
+                     labels = stringr::str_wrap(df$Contraste, width = 20)) +
+  scale_x_log10(breaks = c(0.005, 0.01, 0.05, 0.1, 0.5, 1)) +
+  labs(x = "Razón de odds (escala logarítmica)") +
+  geom_vline(xintercept = 1, color = "black", linetype = "dashed", alpha = .5) +
+  theme_light()
 ```
-De la Tabla 7  y la Figura 7 se extrae que:
+De la Tabla 2 y la @fig-forest se extrae que:
 
--  La chance de sobrevivir de quienes embarcaron en S es entre un 5,4% y un 69,2% menor que la de quienes embarcaron en C, para el mismo sexo, edad y tarifa. 
+- La chance de sobrevivir de una persona de determinada edad es entre un 12,3% y un 27,2% menor que la de una persona cinco años menor, para el mismo sexo y la misma clase.
 
-- La chance de sobrevivir de los hombres de 28 años es entre un 85% y un 93,8% menor que la de las mujeres de 28 años, para el mismo puerto de embarque y niveles fijos de tarifa. 
 
-- La chance de sobrevivir de un hombre de determinada edad es entre un 8,5% y un 27,9% menor que la de un hombre 5 años menor, para el mismo puerto y logFare fijo. 
+- Para los pasajeros de 1° clase, la chance de sobrevivir de los hombres es entre un 88,9% y un 99,1% menor que la de las mujeres, para la misma edad. 
 
-- La chance de sobrevivir de una persona de 28 años con logFare = X + 1 es entre un 49% y un 147,2% mayor que la de una persona de 28 años con logFare = X, para el mismo sexo y puerto.
+- Para los pasajeros de 2° clase, la chance de sobrevivir de los hombres es entre un 96% y un 99,6% menor que la de las mujeres, para la misma edad. 
+
+- Para los pasajeros de 3° clase, la chance de sobrevivir de los hombres es entre un 54,4% y un 86,5% menor que la de las mujeres, para la misma edad. 
+
+- Para los pasajeros de género femenino, la chance de sobrevivir estando en 3° clase es entre un 94,1% y un 99,6% menor que las que se encuentran en 1° clase, para la misma edad. 
+
+- Para los pasajeros de género masculino, la chance de sobrevivir estando en 2° clase es entre un 70,4% y un 95% menor que los que se encuentran en 1° clase, para la misma edad. 
+
+- Para los pasajeros de género masculino, la chance de sobrevivir estando en 3° clase es entre un 75,6% y un 93,7% menor que la de los hombres de 1° clase, para la misma edad.
 
 
 # Conclusión 
 
-El presente trabajo permitió ajustar y evaluar un modelo lineal generalizado con enlace logit para estudiar los factores asociados a la supervivencia de los pasajeros. A través de un proceso de selección, diagnóstico y validación, se obtuvo un modelo final con el sexo, la edad, la tarifa y el puerto de embarque como variables explicativas. 
+El presente trabajo permitió ajustar y evaluar un modelo lineal generalizado con enlace logit para estudiar los factores asociados a la supervivencia de los pasajeros. A través de un proceso de selección, diagnóstico y validación, se obtuvo un modelo final con el sexo, la edad y la clase como variables explicativas, incluyendo la interacción entre sexo y clase. 
 
-El análisis evidenció que el sexo, la tarifa y el puerto de embarque contribuyen a explicar la probabilidad de sobrevivir. Los hombres tuvieron una chance de sobrevivir mucho menor que las mujeres, mientras que una tarifa más alta se asoció con una mayor chance de supervivencia. Además, los pasajeros que embarcaron en Southampton, Inglaterra tuvieron una chance menor que los que embarcaron en Cherburgo, Francia. El efecto de la edad dependió del sexo: no fue significativo en las mujeres, pero en los hombres a mayor edad menor fue la chance de sobrevivir. La validación del modelo, mediante la curva ROC y la matriz de confusión, mostró una capacidad predictiva adecuada, confirmando su utilidad para clasificar a los pasajeros según su supervivencia. 
+El análisis evidenció que el sexo, la clase y la edad contribuyen a explicar la probabilidad de sobrevivir. Los hombres tuvieron una chance de sobrevivir mucho menor que las mujeres en las tres clases, aunque la brecha fue menor en tercera clase. Viajar en una clase inferior también se asoció con una menor chance de supervivencia: en las mujeres la diferencia apareció en tercera clase, mientras que en los hombres ya se observó en segunda y tercera clase respecto de la primera. Además, por cada cinco años más de edad, la chance de sobrevivir disminuyó, para el mismo sexo y la misma clase. La validación del modelo, mediante la curva ROC y la matriz de confusión, mostró una capacidad predictiva adecuada, con una exactitud cercana al 78%, lo que confirma su utilidad para clasificar a los pasajeros según su supervivencia. 
  
  

@@ -278,7 +278,12 @@ continuación:
 \begin{itemize}
   \item \textbf{Edad}: medida en años. Es una variable cuantitativa continua.
 
- \item \textbf{Tarifa}: precio del pasaje abonado por el pasajero, medida en libras esterlinas (£). Es una variable cuantitativa continua.
+ \item \textbf{Clase}: clase del pasaje, cualitativa con 3 niveles:
+ \begin{itemize}
+    \item ``1'': Primera clase
+    \item ``2'': Segunda clase
+    \item ``3'': Tercera clase
+  \end{itemize}
  
  \item \textbf{Embarcación}: puerto en el que el pasajero abordó el Titanic, categorizada en tres niveles:
   \begin{itemize}
@@ -296,101 +301,26 @@ continuación:
 
 \section{Análisis Descriptivo}\label{anuxe1lisis-descriptivo}
 
-A continuación se presenta una visión general de las características
+A continuación se realiza una descripción general de las características
 clave de la población estudiada.
 
-\begin{table}[!h]
-\centering
-\caption{\label{tab:unnamed-chunk-3}Frecuencias absolutas y relativas de supervivencia}
-\centering
-\begin{tabular}[t]{ccc}
-\toprule
-Sobrevivió & Frecuencia & Porcentaje (\%)\\
-\midrule
-No & 424 & 59.55\\
-Sí & 288 & 40.45\\
-Total & 712 & 100.00\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[!h]
-\centering
-\caption{\label{tab:unnamed-chunk-4}Frecuencias absolutas y relativas de sexo}
-\centering
-\begin{tabular}[t]{ccc}
-\toprule
-Sexo & Frecuencia & Porcentaje (\%)\\
-\midrule
-Femenino & 259 & 36.38\\
-Masculino & 453 & 63.62\\
-Total & 712 & 100\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\newpage
-
-\begin{table}[!h]
-\centering
-\caption{\label{tab:unnamed-chunk-5}Frecuencias absolutas y relativas de Embarcación}
-\centering
-\begin{tabular}[t]{ccc}
-\toprule
-Embarcación & Frecuencia & Porcentaje (\%)\\
-\midrule
-C & 130 & 18.26\\
-Q & 28 & 3.93\\
-S & 554 & 77.81\\
-Total & 712 & 100\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[!h]
-\centering
-\caption{\label{tab:unnamed-chunk-6}Estadísticas descriptivas de la variable edad}
-\centering
-\begin{tabular}[t]{cccccc}
-\toprule
-Variable & Media & Mediana & DE & Mínimo & Máximo\\
-\midrule
-edad & 29.64 & 28 & 14.49 & 0.42 & 80\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[!h]
-\centering
-\caption{\label{tab:unnamed-chunk-7}Estadísticas descriptivas de la variable tarifa}
-\centering
-\begin{tabular}[t]{cccccc}
-\toprule
-Variable & Media & Mediana & DE & Mínimo & Máximo\\
-\midrule
-tarifa & 34.57 & 15.64585 & 52.94 & 0 & 512.3292\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-En conjunto, en las tablas descriptivas se observa que de los 712
-pasajeros considerados, 424 (59,55 \%) no sobrevivieron y 288 (40,45 \%)
-sí lo hicieron, una distribución con casos suficientes en ambas
-categorías para estudiar los factores asociados a la supervivencia. La
-mayoría de los pasajeros eran hombres (63,62 \%) y la mayor cantidad de
-pasajeros embarcaron en Southampton (77,81 \%), mientras que la
-categoría Queenstown quedó representada por solo 28 observaciones (3,93
-\%), lo que podría dar estimaciones menos precisas para ese puerto. La
-edad presentó una distribución aproximadamente simétrica, con media de
-29,64 años y mediana de 28, y una dispersión considerable (desvío
-estándar de 14,49 años). La tarifa, en cambio, mostró una fuerte
-asimetría a la derecha, con una media (34,57) más del doble que la
-mediana (15,65) y valores extremos de hasta 512,33, por lo que se
-justifica transformarla con logaritmo antes de incluirla en el modelo.
-En síntesis, la muestra es adecuada para el análisis, y las
-características observadas, como la composición por sexo, la edad y la
-tarifa, son variables de interés para evaluar su asociación con la
-supervivencia.
+En principio, se observa que de los 712 pasajeros considerados, 424
+(59,55 \%) no sobrevivieron y 288 (40,45 \%) sí lo hicieron, una
+distribución con casos suficientes en ambas categorías para estudiar los
+factores asociados a la supervivencia. La mayoría de los pasajeros eran
+hombres (63,62 \%) y la mayor cantidad de pasajeros embarcaron en
+Southampton (77,81 \%), mientras que la categoría Queenstown quedó
+representada por solo 28 observaciones (3,93 \%), lo que podría dar
+estimaciones menos precisas para ese puerto. La edad presentó una
+distribución aproximadamente simétrica, con media de 29,64 años y
+mediana de 28, y una dispersión considerable (desvío estándar de 14,49
+años).La clase del pasajero mostró que casi la mitad de los pasajeros
+viajaba en tercera clase (355 pasajeros, 49,86 \%), mientras que primera
+y segunda clase tuvieron una participación similar y menor (184
+pasajeros, 25,84 \%, y 173 pasajeros, 24,30 \%, respectivamente). En
+síntesis, la muestra es adecuada para el análisis, y las características
+observadas, como la composición por sexo, la edad y la clase, son
+variables de interés para evaluar su asociación con la supervivencia.
 
 \begin{figure}
 
@@ -404,9 +334,9 @@ supervivencia.
 
 \end{figure}%
 
-Se observa que la proporción de pasajeros que sobrevivieron es más alta
-para aquellos con sexo femenino en comparacón a los pasajeros
-masculinos.
+En la Figura~\ref{fig-1}, se observa que la proporción de pasajeros que
+sobrevivieron es más alta para aquellos con sexo femenino en comparacón
+a los pasajeros masculinos.
 
 \begin{figure}
 
@@ -421,18 +351,40 @@ de embarcación}
 
 \end{figure}%
 
-Se observa una mayor proporción de sobrevivientes entre los pasajeros
-que embarcaron en C (aprox. 60\%) en comparación con Q y S (aprox. 28\%
-y 36\%), lo que sugiere una posible asociación entre el puerto de
-embarque y la supervivencia.
+En la Figura~\ref{fig-2}, se observa una mayor proporción de
+sobrevivientes entre los pasajeros que embarcaron en C (aprox. 60\%) en
+comparación con Q y S (aprox. 28\% y 36\%), lo que sugiere una posible
+asociación entre el puerto de embarque y la supervivencia.
 
-\begin{figure}[H]
+\begin{figure}
 
-{\centering \pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/unnamed-chunk-8-1.pdf}}
+\centering{
+
+\pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/fig-3-1.pdf}}
 
 }
 
-\caption{Distribución de la edad según supervivencia}
+\caption{\label{fig-3}Proporción de pasajeros sobrevivientes según
+clase}
+
+\end{figure}%
+
+En la Figura~\ref{fig-3}, se observa que, en primera clase sobrevivió
+aproximadamente el 65 \% de los pasajeros, en segunda clase cerca del 48
+\% y en tercera clase solo alrededor del 24 \%. Es decir, la
+supervivencia fue mayor en la clase más alta y menor en la más baja.
+Esto sugiere una asociación entre la clase y la supervivencia, por lo
+que esta variable resulta relevante para incluir en el análisis.
+
+\begin{figure}
+
+\centering{
+
+\pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/fig-4-1.pdf}}
+
+}
+
+\caption{\label{fig-4}Distribución de la edad según supervivencia}
 
 \end{figure}%
 
@@ -443,22 +395,6 @@ observa, sin embargo, una mayor proporción de sobrevivientes entre los
 niños pequeños, y una leve mayor presencia de no sobrevivientes en
 edades avanzadas.
 
-\begin{figure}[H]
-
-{\centering \pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/unnamed-chunk-9-1.pdf}}
-
-}
-
-\caption{Distribución de la log(Tarifa) según supervivencia}
-
-\end{figure}%
-
-La tarifa pagada parece estar asociada a la supervivencia: los pasajeros
-que sobrevivieron presentan en general tarifas más altas (mediana de
-log(Tarifa + 1) mayor) que quienes no sobrevivieron, que se concentran
-en tarifas bajas. Esto sugiere que la tarifa podría ser un predictor
-relevante de la supervivencia.
-
 \section{Modelado estadístico}\label{modelado-estaduxedstico}
 
 El trabajo se realizará bajo el enfoque de modelos lineales
@@ -467,9 +403,9 @@ generalizados, utilizando lo desarrollado por Nelder y Wedderburn.
 \subsection{Selección del modelo}\label{selecciuxf3n-del-modelo}
 
 Para modelar la probabilidad de supervivencia de los pasajeros del
-Titanic, en función de las variables explicativas sexo, edad, tarifa del
-pasaje y puerto de embarque, se propuso emplear un modelo con función de
-enlace logit.
+Titanic, en función de las variables explicativas sexo, edad, clase y
+puerto de embarque, se propuso emplear un modelo con función de enlace
+logit.
 
 En primer lugar, se seleccionaron las variables explicativas
 consideradas relevantes para explicar la supervivencia de los pasajeros
@@ -479,48 +415,22 @@ orden entre dichas variables, utilizando los métodos de selección hacia
 adelante (forward) y hacia atrás (backward), con el criterio de
 información de Akaike (AIC) y la deviance de cada modelo. Ambos
 procedimientos condujeron al mismo modelo final, que incorpora las
-interacciones entre sexo y edad, y entre edad y tarifa del pasaje.
+vaiables sexo, edad, clase y la interaccion entre sexo y clase.
 
-\section{Probamos linealidad de la predictoras
-continuas}\label{probamos-linealidad-de-la-predictoras-continuas}
+\subsection{Probamos linealidad de la predictora
+continua}\label{probamos-linealidad-de-la-predictora-continua}
 
-Con el objetivo de evaluar si la relación entre la edad y el logit de la
-probabilidad de supervivencia podía considerarse lineal, se compararon
-dos modelos alternativos.
-
-En primer lugar, se construyó un modelo que incorpora la variable edad
-como ordinal, dividiendo su rango en cinco categorías según los
-cuantiles 0.2, 0.4, 0.6 y 0.8. Posteriormente, se ajustó un segundo
-modelo en el que la edad se representó mediante variables indicadoras
-(dummies), permitiendo una relación no necesariamente lineal con la
-respuesta.
-
-Finalmente, se evaluó si la incorporación de esta última variable
-aportaba una mejora significativa al modelo original mediante una prueba
-de razón de verosimilitudes.
-
-Los resultados no proporcionaron evidencia suficiente para justificar la
-incorporación de la edad categorizada (\(p-value = 0.19\)). Por lo
-tanto, se decidió mantener la edad como variable continua en el modelo
-final.
-
-Adicionalmente, dado que se cuenta con otra variable continua, el
-logaritmo de la tarifa (logTarifa), se procedió a evaluar de forma
-análoga si su relación con el logit de la probabilidad de supervivencia
-podía considerarse lineal mediante la comparación de modelos
-alternativos.
-
-Se construyó también un modelo que incorpora la variable logTarifa como
-ordinal, dividiendo su rango en cinco categorías según los cuantiles
-0.2, 0.4, 0.6 y 0.8. Posteriormente, se ajustó un segundo modelo en el
-que dicha variable se representó mediante variables indicadoras
-(dummies), permitiendo capturar una relación no necesariamente lineal
-con la respuesta.
-
-Los resultados no proporcionaron evidencia suficiente para justificar la
-incorporación de la tarifa categorizada de forma no lineal
-(\(p-value = 0.56\)). En consecuencia, se decidió mantener logTarifa
-como variable continua en el modelo final.
+Para evaluar si la relación entre la edad y el logit de la probabilidad
+de supervivencia podía considerarse lineal, se construyó una versión
+categorizada de la edad en cuatro tramos definidos por los cuartiles del
+conjunto de entrenamiento: \([0.42, 20], (20, 28], (28, 38]\) y
+\((38, 74]\). Se comparó el modelo con la edad continua contra el modelo
+que incorpora además la edad categorizada mediante una prueba de razón
+de verosimilitud, de modo que el modelo lineal quedara anidado en el
+ampliado. Los resultados no proporcionaron evidencia suficiente para
+justificar la incorporación de la edad categorizada (p-valor = 0.137).
+Por lo tanto, se decidió mantener la edad como variable continua en el
+modelo final.
 
 Por lo tanto, el modelo seleccionado se expresa como:
 
@@ -528,34 +438,20 @@ Por lo tanto, el modelo seleccionado se expresa como:
 \begin{aligned}
 \text{logit}(\pi_i) =  \ln\left(\frac{\pi_i}{1 - \pi_i}\right) = &
 \beta_0 + \beta_1\,\text{Sexo}_i +
-\beta_2\,\text{logTarifa}_i +
-\beta_3\,\text{EmbarcacionQ}_i +
-\beta_4\,\text{EmbarcacionS}_i + \\
-& + \beta_5\,\text{Edad}_i + 
-\beta_6\, (\text{Sexo}_i \times \text{Edad}_i) +
-\beta_7\, (\text{logTarifa}_i \times \text{Edad}_i), \quad i=\overline{1,571}
+\beta_2\,\text{Clase2}_i +
+\beta_3\, \text{Clase3}_i+
+\beta_4\, \text{Edad}_i+ \\
+& + \beta_5\,(\text{Sexo}_i \times \text{Clase2}_i) + 
+\beta_6\, (\text{Sexo}_i \times \text{Clase3}_i), \quad i=\overline{1,571}
 \end{aligned}
-\] \noindent donde:
-
-\begin{itemize}
-  \item $\text{Sexo}_i = 
-  \begin{cases}
-    1 & \text{si } \text{Masculino} \\
-    0 & \text{si } \text{Femenino} 
-  \end{cases}$
-  
-  \item $\text{EmbarcaciónQ}_i = 
-  \begin{cases}
-    1 & \text{si } \text{Embarcación = Q}  \\
-    0 & \text{si } \text{en otro caso} 
-  \end{cases}$  
-
-  \item $\text{EmbarcaciónS}_i = 
-  \begin{cases}
-    1 & \text{si } \text{Embarcación = S}  \\
-    0 & \text{si } \text{en otro caso} 
-  \end{cases}$
-\end{itemize}
+\] \[
+\begin{aligned}
+\text{Sexo}_i &= \begin{cases} 1 & \text{si Masculino} \\ 0 & \text{si Femenino} \end{cases} \\[4pt]
+\text{Clase2}_i &= \begin{cases} 1 & \text{si Clase = 2} \\ 0 & \text{en otro caso} \end{cases}
+\quad
+\text{Clase3}_i = \begin{cases} 1 & \text{si Clase = 3} \\ 0 & \text{en otro caso} \end{cases}
+\end{aligned}
+\]
 
 \subsection{Bondad del ajuste y estimación del
 modelo}\label{bondad-del-ajuste-y-estimaciuxf3n-del-modelo}
@@ -570,47 +466,39 @@ nueva variable y comparar su ajuste con el modelo original mediante una
 prueba de razón de verosimilitud. En este análisis, la comparación entre
 ambos modelos no mostró evidencia suficiente para rechazar la adecuación
 del enlace logit, por lo que se considera apropiado mantenerlo en el
-modelo final (\(p-value = 0.12\)).
+modelo final (\(p-value = 0.14\)).
 
-\begin{longtable*}[t]{ccc}
-\toprule
-Enlace & Parámetros & AIC\\
-\midrule
-Cloglog & 8 & 554.49\\
-Logit & 8 & 557.82\\
-Probit & 8 & 557.99\\
-\bottomrule
-\end{longtable*}
-
-Comparación de enlaces según AIC (mismo predictor lineal)
-
-Si bien se observa que el menor valor de Akaike es el del enlace
-cloglog, dado que el enlace logit es el más utilizado para respuesta
-binaria y tambien posee la ventaja de interpretar el modelo en terminos
-de razones de odds, se decide elegir este modelo para continuar con el
-análisis ya que en el test de adecuación del enlace el logit es
-adecuado.
+Se compararon las tres funciones de enlace (logit, probit y cloglog)
+ajustando cada una con el mismo predictor lineal. El menor valor del
+criterio de información de Akaike correspondió al enlace logit. Este
+resultado, junto con que el test de adecuación del enlace no rechazó el
+logit (p-valor = 0.14), respalda su elección. Además, el enlace logit
+permite interpretar los efectos en términos de razones de odds, por lo
+que se continúa el análisis con este modelo.
 
 Además, para evaluar la bondad de ajuste del modelo, se aplicó la prueba
 de Hosmer y Lemeshow. Esta prueba compara las frecuencias observadas y
 esperadas del evento de interés en grupos formados a partir de los
-valores predichos por el modelo y dado el tamaño muestral disponible, se
-optó por dividir las observaciones en 10 grupos de igual tamaño según
-los valores de probabilidad predicha. Finalmente, se concluye que el
-modelo presenta un ajuste adecuado a los datos (\(p-value = 0.46\)).
+valores predichos por el modelo y dado el tamaño muestral disponible.
+
+La prueba de Hosmer-Lemeshow con 12 grupos (estadístico = 17,11; gl =
+10; p = 0,072) no rechaza la hipótesis de buen ajuste. Cabe aclarar que
+el resultado es sensible al número de grupos: con 8 y 10 grupos el
+p-valor fue menor a 0,05. Por lo tanto, no hay evidencia concluyente de
+falta de ajuste, aunque podrían existir desvíos leves.
 
 Considerando los resultados del estudio del modelo a través de los
-diferentes tests de hipótesis, el ajuste realizado es el siguiente:
+diferentes tests de hipótesis, el modelo estimado es el siguiente:
 
 \[
 \begin{aligned}
-\text{logit}(\hat{\pi_i}) = \ln\left(\frac{\hat{\pi_i}}{1 - \hat{\pi_i}}\right) =& \ 0.76 - 0.93\,\text{Sexo}_i +
-0.12\,\text{logTarifa}_i -
-1.12\,\text{EmbarcacionQ}_i -
-0.62\,\text{EmbarcacionS}_i - \\
-& - 0.045\,\text{Edad}_i - 
-0.05\, (\text{Sexo}_i \times \text{Edad}_i) +
-0.019\, (\text{logTarifa}_i \times \text{Edad}_i), \quad i=\overline{1,571}
+\text{logit}(\hat\pi_i) =  \ln\left(\frac{\hat\pi_i}{1 - \hat\pi_i}\right) = &
+4.85  -3.45\,\text{Sexo}_i -
+1.21\,\text{Clase2}_i -
+4.14\, \text{Clase3}_i -
+0.045\, \text{Edad}_i - \\
+& - 0.90\,(\text{Sexo}_i \times \text{Clase2}_i) + 
+2.06\, (\text{Sexo}_i \times \text{Clase3}_i), \quad i=\overline{1,571}
 \end{aligned}
 \]
 
@@ -624,28 +512,31 @@ Con el objetivo de analizar la estructura del modelo, se construyó el
 gráfico de los residuos cuantil frente a las probabilidades estimadas
 bajo el enlace logit.
 
-\begin{figure}[H]
+\begin{figure}
 
-{\centering \pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/unnamed-chunk-18-1.pdf}}
+\centering{
+
+\pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/fig-residuos-1.pdf}}
 
 }
 
-\caption{Análisis de residuos}
+\caption{\label{fig-residuos}Análisis de residuos}
 
 \end{figure}%
 
-En el gráfico de residuos cuantil contra las probabilidades estimadas se
-observa que los residuos se distribuyen aproximadamente alrededor de
-cero, sin un patrón sistemático definido. Aunque hay una mayor
-concentración de observaciones en las probabilidades estimadas más
-bajas, no se identifican tendencias claras que indiquen problemas
-importantes de ajuste, lo que sugiere que la función de enlace logit es
-adecuada. Además, para verificar la distribución supuesta de los
-errores, se empleó el gráfico probabilístico normal de los residuos
-cuantil, donde los puntos se alinean adecuadamente con la línea de
-referencia, con leves desviaciones en los extremos. En conjunto, no se
-evidencian desvíos sistemáticos importantes, por lo que el modelo
-presenta un ajuste globalmente satisfactorio.
+En el gráfico de residuos cuantil contra las probabilidades estimadas
+(Figura~\ref{fig-residuos}) se observa que los residuos se distribuyen
+aproximadamente alrededor de cero, sin un patrón sistemático definido.
+Aunque hay una mayor concentración de observaciones en las
+probabilidades estimadas más bajas, no se identifican tendencias claras
+que indiquen problemas importantes de ajuste, lo que sugiere que la
+función de enlace logit es adecuada. Además, para verificar la
+distribución supuesta de los errores, se empleó el gráfico
+probabilístico normal de los residuos cuantil
+(Figura~\ref{fig-residuos}), donde los puntos se alinean adecuadamente
+con la línea de referencia, con leves desviaciones en los extremos. En
+conjunto, no se evidencian desvíos sistemáticos importantes, por lo que
+el modelo presenta un ajuste globalmente satisfactorio.
 
 \subsection{Estudio de la capacidad predictiva del
 modelo}\label{estudio-de-la-capacidad-predictiva-del-modelo}
@@ -653,49 +544,50 @@ modelo}\label{estudio-de-la-capacidad-predictiva-del-modelo}
 La capacidad predictiva del modelo se evaluó sobre el conjunto de
 validación, es decir, sobre pasajeros que no participaron en la
 estimación de los parámetros, de modo de obtener una medida de desempeño
-que no esté sesgada por el ajuste. Con las probabilidades de
-supervivencia estimadas para esas observaciones, se construyó la curva
-ROC, que muestra cómo varían la sensibilidad (tasa de verdaderos
-positivos) y la tasa de falsos positivos (1 - especificidad) al
-modificar el punto de corte de clasificación. Esta curva permite
-analizar el equilibrio entre ambos tipos de acierto y error, y es una
-herramienta útil para elegir un umbral de clasificación adecuado.
-Complementariamente, se calculó el área bajo la curva (AUC) como resumen
-de la capacidad discriminante del modelo.
+que no esté sesgada por el ajuste.
 
-\begin{figure}[H]
+\begin{figure}
 
-{\centering \pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/unnamed-chunk-19-1.pdf}}
+\centering{
+
+\pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/fig-ROC-1.pdf}}
 
 }
 
-\caption{Curva ROC}
+\caption{\label{fig-ROC}Curva ROC en el conjunto de validación}
 
 \end{figure}%
 
-El punto de corte seleccionado fue de 0.842, correspondiente al valor
-que maximiza simultáneamente la sensibilidad y la especificidad del
-modelo. Con este umbral se obtuvo la siguiente matriz de confusión, que
-resume el desempeño del modelo en la clasificación de los casos:
+Con las probabilidades de supervivencia estimadas para esas
+observaciones, se construyó la curva ROC (Figura~\ref{fig-ROC}), que
+muestra cómo varían la sensibilidad (tasa de verdaderos positivos) y la
+tasa de falsos positivos (1 - especificidad) al modificar el punto de
+corte de clasificación. Complementariamente, se calculó el área bajo la
+curva (AUC) como resumen de la capacidad discriminante del modelo, que
+fue de 0,834.
 
-{\def\LTcaptype{none} % do not increment counter
-\begin{longtable}[]{@{}lcc@{}}
-\toprule\noalign{}
-\textbf{Predicho / Observado} & \textbf{No Sobrevivió} &
-\textbf{Sobrevivió} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-\textbf{No Sobrevivió} & 69 & 13 \\
-\textbf{Sobrevivió} & 15 & 44 \\
+El punto de corte de clasificación se determinó con el conjunto de
+entrenamiento y resultó de 0,270, valor que maximiza la suma de la
+sensibilidad y la especificidad (índice de Youden). Con este umbral
+aplicado al conjunto de validación se obtuvo la siguiente matriz de
+confusión:
+
+\begin{longtable}[t]{lcc}
+\caption{\label{tab:unnamed-chunk-16}Matriz de confusión en el conjunto de validación}\\
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{2}{c}{Observado} \\
+\cmidrule(l{3pt}r{3pt}){2-3}
+ & No sobrevivió & Sobrevivió\\
+\midrule
+Predicho: No sobrevivió & 66 & 13\\
+Predicho: Sobrevivió & 18 & 44\\
+\bottomrule
 \end{longtable}
-}
 
-El modelo logró clasificar correctamente al 80\% de las observaciones
-del conjunto de validación, con una sensibilidad del 77\% (proporción de
-sobrevivientes correctamente identificados) y una especificidad del
-82.1\% (proporción de no sobrevivientes correctamente clasificados).
+El modelo logró clasificar correctamente al 78\% de las observaciones
+del conjunto de validación, con una sensibilidad del 77,2\% (proporción
+de sobrevivientes correctamente identificados) y una especificidad del
+78,6\% (proporción de no sobrevivientes correctamente clasificados).
 
 \section{Resultados}\label{resultados}
 
@@ -710,50 +602,67 @@ Las razones de odds permiten cuantificar la variación en la probabilidad
 de sobrevivir ante cambios en las variables explicativas, manteniendo
 constantes las demás condiciones.
 
-\begin{longtable}[t]{lccc}
-\caption{\label{tab:unnamed-chunk-21}Razones de odds e intervalos de confianza del 0.95 (Wald)}\\
+\begin{longtable}[t]{lcc}
+\caption{\label{tab:tab-RO}Razones de odds e intervalos de confianza de nivel 0,95 (Wald)}\\
 \toprule
-Contraste & RO & IC inferior & IC superior\\
+Contraste & RO & IC 95\%\\
 \midrule
-Embarque Q vs. C & 0.327 & 0.093 & 1.155\\
-Embarque S vs. C & 0.540 & 0.308 & 0.946\\
-Sexo (masc. vs. fem.) a los 28 años & 0.097 & 0.062 & 0.150\\
-Edad (X+5 vs. X) en mujeres, logFare = 2.81 & 1.044 & 0.911 & 1.196\\
-Edad (X+5 vs. X) en hombres, logFare = 2.81 & 0.812 & 0.721 & 0.915\\
+Edad (X + 5 vs. X) & 0.799 & (0.728; 0.877)\\
+Sexo (masc. vs. fem.) en 1ª clase & 0.032 & (0.009; 0.111)\\
+Sexo (masc. vs. fem.) en 2ª clase & 0.013 & (0.004; 0.04)\\
+Sexo (masc. vs. fem.) en 3ª clase & 0.248 & (0.135; 0.456)\\
+2ª vs. 1ª clase en mujeres & 0.297 & (0.07; 1.269)\\
 \addlinespace
-logFare (X+1 vs. X) a los 28 años & 1.919 & 1.490 & 2.472\\
+3ª vs. 1ª clase en mujeres & 0.016 & (0.004; 0.059)\\
+2ª vs. 1ª clase en hombres & 0.122 & (0.05; 0.296)\\
+3ª vs. 1ª clase en hombres & 0.124 & (0.063; 0.244)\\
 \bottomrule
 \end{longtable}
 
-\begin{figure}[H]
+\begin{figure}
 
-{\centering \pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/unnamed-chunk-22-1.pdf}}
+\centering{
+
+\pandocbounded{\includegraphics[keepaspectratio]{TpMLG_files/figure-pdf/fig-forest-1.pdf}}
 
 }
 
-\caption{Forest plot de Razones de odds (cambios en edad por 5 años)}
+\caption{\label{fig-forest}Forest plot de Razones de odds (cambios en
+edad por 5 años)}
 
 \end{figure}%
 
-De la Tabla 7 y la Figura 7 se extrae que:
+De la Tabla 2 y la Figura~\ref{fig-forest} se extrae que:
 
 \begin{itemize}
 \item
-  La chance de sobrevivir de quienes embarcaron en S es entre un 5,4\% y
-  un 69,2\% menor que la de quienes embarcaron en C, para el mismo sexo,
-  edad y tarifa.
+  La chance de sobrevivir de una persona de determinada edad es entre un
+  12,3\% y un 27,2\% menor que la de una persona cinco años menor, para
+  el mismo sexo y la misma clase.
 \item
-  La chance de sobrevivir de los hombres de 28 años es entre un 85\% y
-  un 93,8\% menor que la de las mujeres de 28 años, para el mismo puerto
-  de embarque y niveles fijos de tarifa.
+  Para los pasajeros de 1° clase, la chance de sobrevivir de los hombres
+  es entre un 88,9\% y un 99,1\% menor que la de las mujeres, para la
+  misma edad.
 \item
-  La chance de sobrevivir de un hombre de determinada edad es entre un
-  8,5\% y un 27,9\% menor que la de un hombre 5 años menor, para el
-  mismo puerto y logFare fijo.
+  Para los pasajeros de 2° clase, la chance de sobrevivir de los hombres
+  es entre un 96\% y un 99,6\% menor que la de las mujeres, para la
+  misma edad.
 \item
-  La chance de sobrevivir de una persona de 28 años con logFare = X + 1
-  es entre un 49\% y un 147,2\% mayor que la de una persona de 28 años
-  con logFare = X, para el mismo sexo y puerto.
+  Para los pasajeros de 3° clase, la chance de sobrevivir de los hombres
+  es entre un 54,4\% y un 86,5\% menor que la de las mujeres, para la
+  misma edad.
+\item
+  Para los pasajeros de género femenino, la chance de sobrevivir estando
+  en 3° clase es entre un 94,1\% y un 99,6\% menor que las que se
+  encuentran en 1° clase, para la misma edad.
+\item
+  Para los pasajeros de género masculino, la chance de sobrevivir
+  estando en 2° clase es entre un 70,4\% y un 95\% menor que los que se
+  encuentran en 1° clase, para la misma edad.
+\item
+  Para los pasajeros de género masculino, la chance de sobrevivir
+  estando en 3° clase es entre un 75,6\% y un 93,7\% menor que la de los
+  hombres de 1° clase, para la misma edad.
 \end{itemize}
 
 \section{Conclusión}\label{conclusiuxf3n}
@@ -761,19 +670,21 @@ De la Tabla 7 y la Figura 7 se extrae que:
 El presente trabajo permitió ajustar y evaluar un modelo lineal
 generalizado con enlace logit para estudiar los factores asociados a la
 supervivencia de los pasajeros. A través de un proceso de selección,
-diagnóstico y validación, se obtuvo un modelo final con el sexo, la
-edad, la tarifa y el puerto de embarque como variables explicativas.
+diagnóstico y validación, se obtuvo un modelo final con el sexo, la edad
+y la clase como variables explicativas, incluyendo la interacción entre
+sexo y clase.
 
-El análisis evidenció que el sexo, la tarifa y el puerto de embarque
-contribuyen a explicar la probabilidad de sobrevivir. Los hombres
-tuvieron una chance de sobrevivir mucho menor que las mujeres, mientras
-que una tarifa más alta se asoció con una mayor chance de supervivencia.
-Además, los pasajeros que embarcaron en Southampton, Inglaterra tuvieron
-una chance menor que los que embarcaron en Cherburgo, Francia. El efecto
-de la edad dependió del sexo: no fue significativo en las mujeres, pero
-en los hombres a mayor edad menor fue la chance de sobrevivir. La
-validación del modelo, mediante la curva ROC y la matriz de confusión,
-mostró una capacidad predictiva adecuada, confirmando su utilidad para
+El análisis evidenció que el sexo, la clase y la edad contribuyen a
+explicar la probabilidad de sobrevivir. Los hombres tuvieron una chance
+de sobrevivir mucho menor que las mujeres en las tres clases, aunque la
+brecha fue menor en tercera clase. Viajar en una clase inferior también
+se asoció con una menor chance de supervivencia: en las mujeres la
+diferencia apareció en tercera clase, mientras que en los hombres ya se
+observó en segunda y tercera clase respecto de la primera. Además, por
+cada cinco años más de edad, la chance de sobrevivir disminuyó, para el
+mismo sexo y la misma clase. La validación del modelo, mediante la curva
+ROC y la matriz de confusión, mostró una capacidad predictiva adecuada,
+con una exactitud cercana al 78\%, lo que confirma su utilidad para
 clasificar a los pasajeros según su supervivencia.
 
 
